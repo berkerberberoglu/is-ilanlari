@@ -48,12 +48,12 @@ WebFetch ile tara (her güncellemede):
 WebSearch ile büyük şirket ilanları ara.
 
 ## Dashboard Güncelleme
-1. `Read /Users/berkerberberoglu/Desktop/claudelinkedin/dashboard.html` — mevcut URL'leri al
+1. `Read /Users/berkerberberoglu/Desktop/claudelinkedin/dashboard-v2.html` — mevcut URL'leri al
 2. Yeni ilanları ekle (tekrar ekleme, uygunsuzları çıkar)
 3. Her ilan: `{ id, category, company, position, sector, location, fit, note, script?, url }`
 4. Fit: ⭐⭐⭐⭐⭐ tam uyum | ⭐⭐⭐⭐ çok uygun | ⭐⭐⭐ kısmen
 5. LAST_UPDATED = bugünün tarihi
-6. Write et
+6. Write et (dashboard-v2.html'e)
 7. `bash /Users/berkerberberoglu/Desktop/claudelinkedin/push_dashboard.sh`
 8. Özet rapor ver
 
