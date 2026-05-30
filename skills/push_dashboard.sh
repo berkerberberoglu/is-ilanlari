@@ -4,7 +4,7 @@
 
 TOKEN=$(grep GITHUB_TOKEN /Users/berkerberberoglu/Desktop/claudelinkedin/.github_config | cut -d= -f2)
 REPO=$(grep GITHUB_REPO /Users/berkerberberoglu/Desktop/claudelinkedin/.github_config | cut -d= -f2)
-FILE="/Users/berkerberberoglu/Desktop/claudelinkedin/dashboard-v2.html"
+FILE="/Users/berkerberberoglu/Desktop/claudelinkedin/dashboard-v3.html"
 
 echo "📤 Dashboard GitHub'a gönderiliyor..."
 

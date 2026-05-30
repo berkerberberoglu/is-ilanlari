@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Berker — İş İlanları Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3349;
+    --accent: #4f8ef7;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --tag-bg: #1e2235;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 20px; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .logo { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .update-time { font-size: 12px; color: var(--muted); }
+  .stats { display: flex; gap: 16px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .stat-item strong { color: var(--text); }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; margin: 14px 0 0; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; border: none; transition: all .2s; background: transparent; color: var(--muted); }
+  .tab.active { background: var(--accent); color: #fff; }
+  .tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+  .tab-count { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 10px; padding: 1px 6px; font-size: 11px; margin-left: 4px; }
+
+  /* FILTERS */
+  .filters { padding: 12px 20px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; background: var(--bg); }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-btn { padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); white-space: nowrap; transition: all .2s; }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(79,142,247,0.1); }
+  .search-bar { flex: 1; min-width: 150px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; outline: none; }
+  .search-bar:focus { border-color: var(--accent); }
+
+  /* GRID — tek kolon, telefon ve masaüstünde aynı */
+  .grid { padding: 12px 16px; display: grid; grid-template-columns: 1fr; gap: 10px; max-width: 700px; margin: 0 auto; }
+  @media (max-width: 600px) { .grid { padding: 10px 12px; gap: 8px; } }
+
+  /* CARD */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; transition: all .2s; position: relative; overflow: hidden; }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card.status-fav { border-left: 3px solid var(--yellow); }
+  .card.status-applied { border-left: 3px solid var(--green); opacity: .75; }
+  .card.status-skip { border-left: 3px solid var(--red); opacity: .45; }
+  .card.hidden { display: none; }
+
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+  .company { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .sector-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--tag-bg); color: var(--muted); border: 1px solid var(--border); white-space: nowrap; }
+
+  .position { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; line-height: 1.3; }
+
+  .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .meta-item { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 3px; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .badge-green { background: rgba(52,211,153,.15); color: var(--green); }
+  .badge-yellow { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .badge-red { background: rgba(248,113,113,.15); color: var(--red); }
+  .badge-blue { background: rgba(79,142,247,.15); color: var(--accent); }
+  .badge-purple { background: rgba(167,139,250,.15); color: var(--purple); }
+
+  /* ACTIONS */
+  .card-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .btn-link { flex: 1; padding: 9px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; text-decoration: none; text-align: center; display: block; transition: opacity .2s; }
+  .btn-link:hover { opacity: .85; }
+  .btn-icon { padding: 9px 10px; border-radius: 8px; border: 1px solid var(--border); background: transparent; cursor: pointer; font-size: 14px; transition: all .2s; color: var(--text); }
+  .btn-icon:hover { background: var(--surface2); }
+  .btn-icon.active-fav { background: rgba(251,191,36,.15); border-color: var(--yellow); }
+  .btn-icon.active-applied { background: rgba(52,211,153,.15); border-color: var(--green); }
+  .btn-icon.active-skip { background: rgba(248,113,113,.15); border-color: var(--red); }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* SECTION HEADER */
+  .section-header { padding: 8px 20px 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
+
+  /* TEAM MANAGEMENT WARNING */
+  .warning-banner { margin: 4px 0 0; padding: 6px 10px; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.2); border-radius: 8px; font-size: 11px; color: var(--yellow); }
+  .script-banner { margin: 4px 0 0; padding: 6px 10px; background: rgba(167,139,250,.08); border: 1px solid rgba(167,139,250,.25); border-radius: 8px; font-size: 11px; color: var(--purple); }
+
+  /* SIRALAMA BUTONU */
+  .sort-btn { font-weight: 700; border-color: var(--accent) !important; color: var(--accent) !important; }
+  .sort-btn.sorted { background: rgba(79,142,247,0.15) !important; }
+
+  /* ANALİST SEKMESİ */
+  .tab-analyst.active { background: #0ea5e9 !important; color: #fff !important; }
+  .badge-analyst { background: rgba(14,165,233,.15); color: #0ea5e9; }
+
+  /* İŞARETLİ SEKME STİLLERİ */
+  .tab-fav-tab.active { background: rgba(251,191,36,.85) !important; color: #000 !important; }
+  .tab-applied-tab.active { background: rgba(52,211,153,.85) !important; color: #000 !important; }
+  .tab-skip-tab.active { background: rgba(248,113,113,.85) !important; color: #000 !important; }
+  .completed-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 600; margin-right: 4px; }
+  .badge-applied { background: rgba(52,211,153,.15); color: var(--green); }
+  .badge-skip { background: rgba(248,113,113,.15); color: var(--red); }
+  .badge-fav { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .card.in-action { opacity: 1 !important; }
+
+  /* SCROLLTOP */
+  .scroll-top { position: fixed; bottom: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; border: none; cursor: pointer; font-size: 18px; display: none; align-items: center; justify-content: center; z-index: 99; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+  .scroll-top.visible { display: flex; }
+
+  /* LAST UPDATED */
+  .footer { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">🎯 Berker — İş İlanları</div>
+    <div class="update-time" id="updateTime">Yükleniyor...</div>
+  </div>
+  <div class="stats">
+    <span class="stat-item">Toplam: <strong id="totalCount">0</strong></span>
+    <span class="stat-item">⭐ Favoriler: <strong id="favCount">0</strong></span>
+    <span class="stat-item">✅ Başvurulan: <strong id="appliedCount">0</strong></span>
+    <span class="stat-item">👁️ Görüntülenen: <strong id="viewedCount">0</strong></span>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" onclick="switchTab('all')" id="tab-all">Tümü <span class="tab-count" id="count-all">0</span></button>
+    <button class="tab" onclick="switchTab('big')" id="tab-big">🏛️ Büyük <span class="tab-count" id="count-big">0</span></button>
+    <button class="tab" onclick="switchTab('mid')" id="tab-mid">🏢 Orta <span class="tab-count" id="count-mid">0</span></button>
+    <button class="tab" onclick="switchTab('startup')" id="tab-startup">🚀 Startup <span class="tab-count" id="count-startup">0</span></button>
+    <button class="tab" onclick="switchTab('remote')" id="tab-remote">🌍 Remote <span class="tab-count" id="count-remote">0</span></button>
+    <button class="tab" onclick="switchTab('warn')" id="tab-warn">⚠️ Dikkat <span class="tab-count" id="count-warn">0</span></button>
+    <button class="tab" onclick="switchTab('script')" id="tab-script">🎯 Script <span class="tab-count" id="count-script">0</span></button>
+    <button class="tab tab-analyst" onclick="switchTab('analyst')" id="tab-analyst">📊 Analist <span class="tab-count" id="count-analyst">0</span></button>
+    <button class="tab tab-fav-tab" onclick="switchTab('fav')" id="tab-fav">⭐ Favoriler <span class="tab-count" id="count-fav">0</span></button>
+    <button class="tab tab-applied-tab" onclick="switchTab('applied')" id="tab-applied">✅ Başvurulanlar <span class="tab-count" id="count-applied">0</span></button>
+    <button class="tab tab-skip-tab" onclick="switchTab('skip')" id="tab-skip">❌ Geçilenler <span class="tab-count" id="count-skip">0</span></button>
+  </div>
+</div>
+
+<div class="filters">
+  <input type="text" class="search-bar" id="searchInput" placeholder="🔍 Şirket veya pozisyon ara..." oninput="filterCards()">
+  <button class="filter-btn sort-btn" id="sortBtn" onclick="toggleSort(this)" title="Sıralama">🕐 Son Eklenen</button>
+  <button class="filter-btn active" onclick="filterSector('all', this)">Tümü</button>
+  <button class="filter-btn" onclick="filterSector('teknoloji', this)">Teknoloji</button>
+  <button class="filter-btn" onclick="filterSector('fintech', this)">Fintech</button>
+  <button class="filter-btn" onclick="filterSector('e-ticaret', this)">E-Ticaret</button>
+  <button class="filter-btn" onclick="filterSector('fmcg', this)">FMCG</button>
+  <button class="filter-btn" onclick="filterSector('bankacılık', this)">Bankacılık</button>
+  <button class="filter-btn" onclick="filterSector('gaming', this)">Gaming</button>
+  <button class="filter-btn" onclick="filterSector('otomotiv', this)">Otomotiv</button>
+  <button class="filter-btn" onclick="filterSector('sigorta', this)">Sigorta</button>
+  <button class="filter-btn" onclick="filterSector('edtech', this)">EdTech</button>
+</div>
+
+<div id="cardsContainer"></div>
+
+<div class="footer">Son güncelleme: <span id="footerDate"></span></div>
+
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+// ============================================================
+// İLAN VERİLERİ — Her sabah otomatik güncellenir
+// ============================================================
+const LAST_UPDATED = "30 Mayıs 2026 — v3 (Analist sekmesi eklendi)";
+
+const jobs = [
+  // ==================== BÜYÜK ŞİRKETLER ====================
+  { id:1, category:"big", company:"Google", position:"Product Marketing Manager", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"4 yıl req, AI marketing, ekip yönetimi yok", url:"https://tr.linkedin.com/jobs/view/product-marketing-manager-english-turkish-at-google-4410823130" },
+  { id:2, category:"big", company:"MetLife Türkiye", position:"Growth Marketing Deputy Manager", sector:"Sigorta", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"6 yıl req, growth/funnel/CRM, ekip yönetimi yok", script:"Sigortam.net mülakatındaki growth/funnel deneyimin + QNB sigorta geçmişin burada çok değerli", url:"https://tr.linkedin.com/jobs/view/growth-marketing-deputy-manager-at-metlife-t%C3%BCrkiye-4401442846" },
+  { id:3, category:"big", company:"MetLife Türkiye", position:"Business Partnership Senior Specialist", sector:"Sigorta", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"4 yıl req, n11 partnership geçmişinle birebir", script:"n11'deki Papara, Yapı Kredi, Masterpass, ETS Tour partnership hikayelerin — tam birebir uyum", url:"https://tr.linkedin.com/jobs/view/business-partnership-senior-specialist-at-metlife-t%C3%BCrkiye-4379620966" },
+  { id:4, category:"big", company:"Red Bull", position:"Strategic Partnership Manager", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"5 yıl req, partnership + marketing", script:"n11'de Samsung, Vitra, Lenovo gibi büyük markalarla yapılan 360° partnership sunumları ve kampanya yönetimi hikayelerin güçlü", url:"https://tr.linkedin.com/jobs/view/strategic-partnership-manager-at-red-bull-4398517738" },
+  { id:5, category:"big", company:"Dream Games", position:"Senior Performance Marketing Specialist", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"3 yıl req, UA/mobile, Türkiye unicorn", url:"https://tr.linkedin.com/jobs/view/senior-performance-marketing-specialist-at-dream-games-4353057816" },
+  { id:6, category:"big", company:"QNB Türkiye", position:"Digital Performance Marketing Asst. Manager", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"4 yıl req, sektörü biliyorsun", script:"QNB'de portföy yönetimi + fizibilite çalışmaları + ürün puanlama sistemleri hikayen burada doğrudan anlamlı", url:"https://tr.linkedin.com/jobs/view/digital-performance-marketing-assistant-manager-at-qnb-t%C3%BCrkiye-4408845498" },
+  { id:7, category:"big", company:"Migros One", position:"Digital Marketing Expert", sector:"E-Ticaret", location:"Ataşehir", fit:"⭐⭐⭐⭐", note:"2 yıl req, Google/Meta/TikTok kampanya", url:"https://tr.linkedin.com/jobs/view/digital-marketing-expert-at-migros-one-4401622424" },
+  { id:8, category:"big", company:"Migros Ticaret", position:"Pazarlama Planlama Yöneticisi", sector:"E-Ticaret", location:"Ataşehir", fit:"⭐⭐⭐⭐", note:"Büyük perakende, planlama + marketing", url:"https://tr.linkedin.com/jobs/view/pazarlama-planlama-y%C3%B6neticisi-at-migros-ticaret-4407763487" },
+  { id:9, category:"big", company:"Mastercard", position:"Senior Specialist, Product Management", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"EEMEA ürün lansmanı/scaling, prestijli", url:"https://tr.linkedin.com/jobs/view/senior-specialist-product-management-at-mastercard-4412808842" },
+  { id:10, category:"big", company:"HUGO BOSS", position:"CRM & Marketing Communications SR Specialist", sector:"Moda", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"CRM + dijital marketing, lüks global marka", url:"https://tr.linkedin.com/jobs/view/crm-marketing-communications-sr-specialist-at-hugo-boss-4393959455" },
+  { id:11, category:"big", company:"Levi Strauss & Co.", position:"CRM Specialist", sector:"Moda", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"CRM + müşteri pazarlama, global marka", url:"https://tr.linkedin.com/jobs/view/crm-specialist-at-levi-strauss-co-4411392641" },
+  { id:12, category:"big", company:"adidas", position:"Senior Specialist Trade Marketing", sector:"Spor/FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Retail marketing, güçlü marka", url:"https://tr.linkedin.com/jobs/view/senior-specialist-trade-marketing-retail-marketing-at-adidas-4384709014" },
+  { id:13, category:"big", company:"ASUS", position:"Channel Marketing Specialist", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐", note:"Kanal pazarlama, global tech", url:"https://tr.linkedin.com/jobs/view/channel-marketing-specialist-at-asus-4408945553" },
+  { id:14, category:"big", company:"SAP", position:"Marketing Execution Senior Specialist", sector:"B2B Yazılım", location:"İstanbul", fit:"⭐⭐⭐", note:"Fortune 500, marketing operations (maternity cover)", url:"https://tr.linkedin.com/jobs/view/marketing-execution-senior-specialist-maternity-cover-at-sap-4414143177" },
+  { id:15, category:"big", company:"Experian", position:"Senior Marketing Specialist", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐", note:"Global veri şirketi, marketing specialist", url:"https://tr.linkedin.com/jobs/view/senior-marketing-specialist-at-experian-4410531223" },
+  { id:16, category:"big", company:"AXA Türkiye", position:"Dijital Satış ve İnovatif İş Birlikleri Kanalı Uzmanı", sector:"Sigorta", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🤝 Partnership + dijital satış — çok uygun", script:"n11'deki bancassurance/banka iş birliği hikayelerin (Yapı Kredi, Papara) + Sigortam.net mülakatı → sigorta sektörü farkındalığın", url:"https://tr.linkedin.com/jobs/view/dijital-sat%C4%B1%C5%9F-ve-inovatif-i%C5%9F-birlikleri-kanal%C4%B1-uzman%C4%B1-at-axa-t%C3%BCrkiye-4389249111" },
+  { id:17, category:"big", company:"ING Türkiye", position:"Digital Marketing Expert", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Dijital marketing, bankacılık geçmişin var", url:"https://tr.linkedin.com/jobs/view/digital-marketing-expert-at-ing-turkiye-4383122327" },
+  { id:18, category:"big", company:"ING Türkiye", position:"Business Banking Digital Marketing Tribe Lead", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐", note:"Dijital büyüme, banking odaklı", url:"https://tr.linkedin.com/jobs/view/business-banking-digital-marketing-payment-and-digital-tribe-lead-at-ing-t%C3%BCrkiye-4411189241" },
+  { id:19, category:"big", company:"ING Hubs Türkiye", position:"Product Manager (Analytics)", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐", note:"Analytics PM, bankacılık geçmişi avantajlı", url:"https://tr.linkedin.com/jobs/view/product-manager-analytics-at-%C4%B1ng-hubs-t%C3%BCrkiye-4356962784" },
+  { id:20, category:"big", company:"Garanti BBVA", position:"Sigorta Ürün Yönetimi Lead", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐", note:"Ürün yönetimi, büyük banka", url:"https://tr.linkedin.com/jobs/view/sigorta-%C3%BCr%C3%BCn-y%C3%B6netimi-lead-at-garanti-bbva-4411250410" },
+  { id:21, category:"big", company:"Turkcell", position:"BIP Product Manager", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Turkcell'de çalıştın, sistemi biliyorsun", script:"Turkcell'deki ürün sahipliği deneyimin (GNC, faturasız/faturalı, e-SIM) ve üst yönetime sunum hikayen burada çok güçlü", url:"https://tr.linkedin.com/jobs/view/b%C4%B1p-product-manager-at-turkcell-4407767692" },
+  { id:22, category:"big", company:"Paycell (Turkcell)", position:"Product Manager", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Turkcell ekosistemi, ödeme ürünü", url:"https://tr.linkedin.com/jobs/view/product-manager-at-paycell-4409257677" },
+  { id:23, category:"big", company:"Beko Corporate (Koç)", position:"Lead - Media Excellence", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐", note:"5 yıl req, media planlama + dijital", url:"https://tr.linkedin.com/jobs/view/lead-media-excellence-at-beko-corporate-4414482417" },
+  { id:24, category:"big", company:"Mavi", position:"Product Marketing Supervisor", sector:"Moda", location:"İstanbul", fit:"⭐⭐⭐", note:"5 yıl req, kategori + marketing köprüsü", url:"https://tr.linkedin.com/jobs/view/product-marketing-supervisor-at-mavi-4413663319" },
+  { id:25, category:"big", company:"Mavi", position:"E-Commerce Digital Product Associate", sector:"Moda", location:"İstanbul", fit:"⭐⭐⭐", note:"Dijital ürün, e-ticaret odaklı", url:"https://tr.linkedin.com/jobs/view/e-commerce-digital-product-associate-at-mavi-4407734549" },
+  { id:26, category:"big", company:"Hepsiburada", position:"Marketing Campaign Executive", sector:"E-Ticaret", location:"Şişli", fit:"⭐⭐⭐⭐", note:"CRM/kampanya, e-ticaret odaklı", url:"https://tr.linkedin.com/jobs/view/marketing-campaign-executive-at-hepsiburada-nasdaq-heps-4417131709" },
+  { id:27, category:"big", company:"Hepsiburada", position:"Category Executive - Mobile", sector:"E-Ticaret", location:"Şişli", fit:"⭐⭐⭐", note:"Kategori yönetimi, büyük platform", url:"https://tr.linkedin.com/jobs/view/category-executive-mobile-at-hepsiburada-nasdaq-heps-4411036750" },
+  { id:28, category:"big", company:"Yemeksepeti", position:"Marketing Campaigns Executive", sector:"E-Ticaret", location:"İstanbul", fit:"⭐⭐⭐", note:"Kampanya yönetimi, büyük platform", url:"https://tr.linkedin.com/jobs/view/marketing-campaigns-executive-at-yemeksepeti-4419085782" },
+  { id:29, category:"big", company:"Red Bull", position:"On Premise Marketing Specialist", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Specialist seviyesi, güçlü marka", url:"https://tr.linkedin.com/jobs/view/on-premise-marketing-specialist-at-red-bull-4404097418" },
+  { id:30, category:"big", company:"Nestlé", position:"Brand Manager", sector:"FMCG", location:"Sarıyer", fit:"⭐⭐⭐", note:"Fortune 500, FMCG brand management", url:"https://tr.linkedin.com/jobs/view/brand-manager-at-nestl%C3%A9-4417347338" },
+  { id:31, category:"big", company:"Danone", position:"Brand Manager (Aptamil)", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Fortune 500, FMCG brand", url:"https://tr.linkedin.com/jobs/view/brand-manager-aptamil-at-danone-4410519206" },
+  { id:32, category:"big", company:"Danone", position:"Brand Manager (Danette & Alpro)", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Fortune 500, FMCG brand", url:"https://tr.linkedin.com/jobs/view/brand-manager-%E2%80%93-danette-alpro-at-danone-4413748725" },
+  { id:33, category:"big", company:"Mondelēz International", position:"Brand Manager (1 Yıl Kontrat)", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Fortune 500, FMCG brand", url:"https://tr.linkedin.com/jobs/view/brand-manager-1-year-fixed-term-at-mondel%C4%93z-%C4%B1nternational-4413955222" },
+  { id:34, category:"big", company:"Unilever", position:"Global Innovation ABM, Dove Hair", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Fortune 500, global brand innovation", url:"https://tr.linkedin.com/jobs/view/global-%C4%B1nnovation-abm-dove-hair-met-at-unilever-4416317934" },
+  { id:35, category:"big", company:"Henkel", position:"Brand Manager, Hair Professional", sector:"FMCG", location:"Ümraniye", fit:"⭐⭐⭐", note:"Fortune 500, marka yönetimi", url:"https://tr.linkedin.com/jobs/view/brand-manager-hair-professional-at-henkel-4418156629" },
+  { id:36, category:"big", company:"AbbVie", position:"Brand Manager", sector:"İlaç/FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Fortune 500, marketing odaklı", url:"https://tr.linkedin.com/jobs/view/brand-manager-at-abbvie-4408994691" },
+  { id:37, category:"big", company:"Anadolu Efes", position:"Brand Manager (Spirits)", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Büyük Türk holding, marka yönetimi", url:"https://tr.linkedin.com/jobs/view/brand-manager-spirits-at-anadolu-efes-4408193825" },
+  { id:38, category:"big", company:"Haleon", position:"Türkiye Shopper & Customer Marketing Lead", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Global FMCG, marketing lead", url:"https://tr.linkedin.com/jobs/view/t%C3%BCrkiye-shopper-customer-marketing-lead-at-haleon-4414719579" },
+  { id:39, category:"big", company:"Pernod Ricard", position:"Portfolio & Marketing Intelligence Manager", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Data-driven marketing", url:"https://tr.linkedin.com/jobs/view/portfolio-marketing-%C4%B1ntelligence-manager-at-pernod-ricard-4411372878" },
+  { id:40, category:"big", company:"ABB", position:"Marketing & Communications Specialist", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐", note:"Global marka, marketing specialist", url:"https://tr.linkedin.com/jobs/view/marketing-communications-specialist-high-power-and-%C4%B1ec-lv-motors-at-abb-4413476240" },
+  { id:41, category:"big", company:"Watsons Türkiye", position:"Influencer Marketing & Reporting Specialist", sector:"Retail", location:"İstanbul", fit:"⭐⭐⭐", note:"Koç grubu retail, influencer + data", url:"https://tr.linkedin.com/jobs/view/%C4%B1nfluencer-marketing-and-reporting-specialist-at-watsons-turkey-4401603309" },
+  { id:42, category:"big", company:"Hyundai Motor", position:"Product Senior Specialist (Pricing & Finance)", sector:"Otomotiv", location:"Maltepe", fit:"⭐⭐⭐", note:"Büyük otomotiv, ürün + pricing", url:"https://tr.linkedin.com/jobs/view/product-senior-specialist-pricing-hyundai-finance-at-hyundai-motor-company-4408847536" },
+  { id:43, category:"big", company:"Tofaş (Koç/Fiat)", position:"Fiat Ürün Yönetmeni", sector:"Otomotiv", location:"İstanbul", fit:"⭐⭐⭐", note:"Koç grubu, ürün yönetimi", url:"https://tr.linkedin.com/jobs/view/fiat-%C3%BCr%C3%BCn-y%C3%B6netmeni-at-tofas-4412258337" },
+  { id:44, category:"big", company:"Toyota Türkiye", position:"Product Specialist", sector:"Otomotiv", location:"İstanbul", fit:"⭐⭐⭐", note:"Büyük otomotiv, ürün specialist", url:"https://tr.linkedin.com/jobs/view/product-specialist-at-toyota-t%C3%BCrkiye-pazarlama-ve-sat%C4%B1%C5%9F-a-%C5%9F-4406486174" },
+  { id:45, category:"big", company:"Teknosa (Koç)", position:"Kategori Yöneticisi - Aksesuar", sector:"Teknoloji Retail", location:"İstanbul", fit:"⭐⭐⭐", note:"Koç grubu, kategori yönetimi", url:"https://tr.linkedin.com/jobs/view/kategori-y%C3%B6neticisi-aksesuar-at-teknosa-4400411288" },
+  { id:46, category:"big", company:"Migros Ticaret", position:"Alkolsüz İçecekler Kıdemli Kategori Uzmanı", sector:"Retail", location:"Ataşehir", fit:"⭐⭐⭐", note:"Büyük süpermarket, kıdemli kategori uzmanı", url:"https://tr.linkedin.com/jobs/view/alkolsüz-İçecekler-kıdemli-kategori-uzmanı-at-migros-ticaret-4410610114" },
+  { id:47, category:"big", company:"Philips", position:"Partner Account Manager", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐", note:"🤝 Partner yönetimi, global marka", url:"https://tr.linkedin.com/jobs/view/partner-account-manager-at-philips-4383907168" },
+  { id:48, category:"big", company:"LEGO Group", position:"Associate eCommerce Marketing Manager", sector:"Retail", location:"İstanbul", fit:"⭐⭐⭐", note:"E-ticaret marketing, global marka", url:"https://tr.linkedin.com/jobs/view/associate-ecommerce-marketing-manager-at-the-lego-group-4412018480" },
+  { id:49, category:"big", company:"Zynga", position:"Performance Marketing Manager", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"Performance/UA, büyük global gaming", url:"https://tr.linkedin.com/jobs/view/performance-marketing-manager-at-zynga-4270661290" },
+  { id:50, category:"big", company:"Bupa Turkey", position:"Growth Engineer", sector:"Sigorta", location:"Maltepe", fit:"⭐⭐⭐", note:"Growth odaklı, sigorta sektörü", url:"https://tr.linkedin.com/jobs/view/growth-engineer-at-bupa-turkiye-4331168712" },
+  { id:51, category:"big", company:"Perfetti Van Melle", position:"Media and Digital Marketing Lead", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"Dijital media lead, büyük global marka", url:"https://tr.linkedin.com/jobs/view/media-and-digital-marketing-lead-at-perfetti-van-melle-4414804333" },
+  { id:52, category:"big", company:"METRO Türkiye", position:"Marketing & Communication Manager", sector:"Retail", location:"Bağcılar", fit:"⭐⭐⭐", note:"Büyük toptancı perakende", url:"https://tr.linkedin.com/jobs/view/marketing-communication-manager-at-metro-t%C3%BCrkiye-4412641202" },
+  { id:53, category:"big", company:"Amazon", position:"Senior Product Manager - Tech", sector:"E-Ticaret", location:"İstanbul", fit:"⭐⭐⭐", note:"Fortune 500, teknik PM ağırlıklı", url:"https://tr.linkedin.com/jobs/view/senior-product-manager-tech-at-amazon-4417362392" },
+  { id:54, category:"big", company:"Getir", position:"Media Executive", sector:"E-Ticaret", location:"İstanbul", fit:"⭐⭐⭐", note:"Büyük Türk unicorn, media odaklı", url:"https://tr.linkedin.com/jobs/view/media-executive-at-getir-4413603537" },
+  { id:55, category:"big", company:"Duolingo", position:"Country Marketing Manager, Turkey", sector:"EdTech", location:"Remote", fit:"⭐⭐⭐⭐", note:"Remote, Türkiye marketing lead", url:"https://tr.linkedin.com/jobs/view/country-marketing-manager-turkey-at-duolingo-4380985718" },
+
+  // ==================== ORTA ÖLÇEKLİ ====================
+  { id:56, category:"mid", company:"n11", position:"Customer Growth CRM Manager", sector:"E-Ticaret", location:"Sarıyer", fit:"⭐⭐⭐⭐", note:"Zaten çalıştın, sistemi biliyorsun", url:"https://tr.linkedin.com/jobs/view/customer-growth-crm-manager-at-n11-4409270466" },
+  { id:57, category:"mid", company:"n11", position:"Fashion Category Supervisor", sector:"E-Ticaret", location:"Sarıyer", fit:"⭐⭐⭐", note:"Kategori yönetimi, marketplace", url:"https://tr.linkedin.com/jobs/view/fashion-category-supervisor-at-n11-4409237550" },
+  { id:58, category:"mid", company:"n11", position:"Automotive Category Specialist", sector:"E-Ticaret", location:"Sarıyer", fit:"⭐⭐⭐", note:"Otomotiv + kategori, n11 geçmişin var", url:"https://tr.linkedin.com/jobs/view/automotive-category-specialist-at-n11-4407784562" },
+  { id:59, category:"mid", company:"n11", position:"Personal Care Category Specialist", sector:"E-Ticaret", location:"Sarıyer", fit:"⭐⭐⭐", note:"Kategori yönetimi, marketplace", url:"https://tr.linkedin.com/jobs/view/personal-care-category-assistant-specialist-specialist-at-n11-4413385879" },
+  { id:60, category:"mid", company:"n11", position:"Product Owner", sector:"E-Ticaret", location:"İstanbul", fit:"⭐⭐⭐", note:"Ürün sahipliği, marketplace", url:"https://tr.linkedin.com/jobs/view/product-owner-at-n11-4395148173" },
+  { id:61, category:"mid", company:"Armut / HomeRun", position:"Growth Marketing Associate Manager", sector:"Marketplace", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Full-funnel kampanya, 14 ülke", url:"https://tr.linkedin.com/jobs/view/growth-marketing-associate-manager-at-armut-homerun-4408802705" },
+  { id:62, category:"mid", company:"arabam.com", position:"Digital Marketing Lead", sector:"E-Ticaret", location:"Ümraniye", fit:"⭐⭐⭐", note:"Digital marketing, otomotiv geçmişin var", url:"https://tr.linkedin.com/jobs/view/digital-marketing-lead-at-arabam-com-4392288498" },
+  { id:63, category:"mid", company:"sahibinden.com", position:"Sr. Product Manager", sector:"Platform", location:"Ataşehir", fit:"⭐⭐⭐", note:"Büyük Türk platformu, ürün yönetimi", url:"https://tr.linkedin.com/jobs/view/sr-product-manager-at-sahibinden-com-4408180131" },
+  { id:64, category:"mid", company:"Koçtaş", position:"Online Kategori İş Geliştirme Uzmanı", sector:"Retail", location:"İstanbul", fit:"⭐⭐⭐", note:"Koç grubu, online kategori + iş geliştirme", url:"https://tr.linkedin.com/jobs/view/online-kategori-i%C5%9F-geli%C5%9Ftirme-uzman%C4%B1-at-ko%C3%A7ta%C5%9F-4409603035" },
+  { id:65, category:"mid", company:"e-bebek", position:"Kategori Uzmanı", sector:"E-Ticaret", location:"Bostancı", fit:"⭐⭐⭐", note:"Büyük e-ticaret, kategori odaklı", url:"https://tr.linkedin.com/jobs/view/kategori-uzman%C4%B1-ref-269hh6y-at-ebebek-4409684052" },
+  { id:66, category:"mid", company:"AppNation", position:"Marketing Manager", sector:"Gaming/App", location:"İstanbul", fit:"⭐⭐⭐", note:"Mobile app marketing", url:"https://tr.linkedin.com/jobs/view/marketing-manager-at-appnation-4411859805" },
+  { id:67, category:"mid", company:"AppNation", position:"Marketing Specialist", sector:"Gaming/App", location:"İstanbul", fit:"⭐⭐⭐", note:"Specialist seviyesi, uygun", url:"https://tr.linkedin.com/jobs/view/marketing-specialist-at-appnation-4395315098" },
+  { id:68, category:"mid", company:"AppNation", position:"Mid / Senior Product Manager", sector:"Gaming/App", location:"İstanbul", fit:"⭐⭐⭐", note:"Ürün yönetimi, app ekosistemi", url:"https://tr.linkedin.com/jobs/view/mid-senior-product-manager-at-appnation-4346587257" },
+  { id:69, category:"mid", company:"SevenApps", position:"Sr. Product Manager", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"Senior PM, mobile gaming", url:"https://tr.linkedin.com/jobs/view/sr-product-manager-at-sevenapps-4416826934" },
+  { id:70, category:"mid", company:"Peak", position:"Product Manager, Games", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"Büyük gaming şirketi, PM", url:"https://tr.linkedin.com/jobs/view/product-manager-games-at-peak-4409247636" },
+  { id:71, category:"mid", company:"iyzico", position:"Senior Product Manager (Open Banking)", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐", note:"Fintech, açık bankacılık", url:"https://tr.linkedin.com/jobs/view/senior-product-manager-open-banking-at-iyzico-4397949113" },
+  { id:72, category:"mid", company:"bitaksi", position:"Product Manager", sector:"Mobility", location:"İstanbul", fit:"⭐⭐⭐", note:"Mobility startup, PM", url:"https://tr.linkedin.com/jobs/view/product-manager-at-bitaksi-4411300793" },
+  { id:73, category:"mid", company:"Tatilsepeti", position:"Product Owner", sector:"Travel/OTA", location:"Kağıthane", fit:"⭐⭐⭐", note:"Online travel, ürün sahipliği", url:"https://tr.linkedin.com/jobs/view/product-owner-at-tatilsepeti-4410143535" },
+  { id:74, category:"mid", company:"Migros One", position:"Product Owner (Operational Products)", sector:"Retail", location:"İstanbul", fit:"⭐⭐⭐", note:"Büyük retail, PO rolü", url:"https://tr.linkedin.com/jobs/view/product-owner-operational-products-at-migros-one-4406433979" },
+  { id:75, category:"mid", company:"Balparmak", position:"E-Commerce and Digital Marketing Manager", sector:"FMCG", location:"Çekmeköy", fit:"⭐⭐⭐", note:"E-ticaret + dijital marketing", url:"https://tr.linkedin.com/jobs/view/e-commerce-and-digital-marketing-manager-at-alt%C4%B1parmak-g%C4%B1da-4406457864" },
+  { id:76, category:"mid", company:"Cambly", position:"Senior Performance Marketing Specialist", sector:"EdTech", location:"Remote/TR", fit:"⭐⭐⭐", note:"Remote, performance marketing", url:"https://tr.linkedin.com/jobs/view/senior-performance-marketing-specialist-%E2%80%94-remote-at-cambly-%C4%B1nc-4416471066" },
+  { id:77, category:"mid", company:"TripleTen", position:"Lifecycle & CRM Growth Manager", sector:"EdTech", location:"Remote/TR", fit:"⭐⭐⭐", note:"Remote, CRM + growth", url:"https://tr.linkedin.com/jobs/view/lifecycle-crm-growth-manager-remote-at-tripleten-%C4%B1ndonesia-4411377577" },
+  { id:78, category:"mid", company:"Baymak / BDR Thermea", position:"Marketing Senior Specialist", sector:"Enerji", location:"Tuzla", fit:"⭐⭐⭐", note:"B2B marketing, senior specialist", url:"https://tr.linkedin.com/jobs/view/marketing-senior-specialist-commercial-channel-at-baymak-bdr-thermea-group-4402943628" },
+  { id:79, category:"mid", company:"PayTR", position:"Pazarlama İletişimi Yöneticisi", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐", note:"Fintech, pazarlama iletişimi", url:"https://tr.linkedin.com/jobs/view/pazarlama-ileti%C5%9Fimi-y%C3%B6neticisi-at-paytr-4415014267" },
+  { id:80, category:"mid", company:"Sanction Scanner", position:"Partnership & Channel Sales Manager", sector:"RegTech", location:"Üsküdar", fit:"⭐⭐⭐", note:"🤝 B2B partnership + channel", url:"https://tr.linkedin.com/jobs/view/partnership-channel-sales-manager-at-sanction-scanner-4417465490" },
+  { id:81, category:"mid", company:"Misli", position:"Product Manager", sector:"Teknoloji", location:"Şişli", fit:"⭐⭐⭐", note:"Dijital ürün, büyüyen platform", url:"https://tr.linkedin.com/jobs/view/product-manager-at-misli-4350100429" },
+  { id:82, category:"mid", company:"Acronis", position:"Senior Product Manager", sector:"Siber Güvenlik", location:"İstanbul", fit:"⭐⭐⭐", note:"Global siber güvenlik şirketi", url:"https://tr.linkedin.com/jobs/view/senior-product-manager-at-acronis-4384503343" },
+  { id:83, category:"mid", company:"Canonical", position:"Product Marketing Manager", sector:"Yazılım", location:"Remote", fit:"⭐⭐⭐", note:"Remote, açık kaynak teknoloji", url:"https://tr.linkedin.com/jobs/view/product-marketing-manager-at-canonical-4384100825" },
+
+  // ==================== STARTUP ====================
+  { id:84, category:"startup", company:"Codeway", position:"Growth Manager (Web)", sector:"App", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Global app şirketi, web growth", url:"https://tr.linkedin.com/jobs/view/growth-manager-web-at-codeway-4409543791" },
+  { id:85, category:"startup", company:"Codeway", position:"Growth Manager", sector:"App", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Global app şirketi, büyüme odaklı", url:"https://tr.linkedin.com/jobs/view/growth-manager-at-codeway-4397311266" },
+  { id:86, category:"startup", company:"Lucida AI", position:"Growth Manager (Mobile)", sector:"AI/App", location:"İstanbul", fit:"⭐⭐⭐", note:"AI + mobile growth", url:"https://tr.linkedin.com/jobs/view/growth-manager-mobile-at-lucida-a%C4%B1-4416092805" },
+  { id:87, category:"startup", company:"Vertigo Games", position:"Senior Growth Manager", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"Gaming startup, büyüyen şirket", url:"https://tr.linkedin.com/jobs/view/senior-growth-manager-at-vertigo-games-4410594493" },
+  { id:88, category:"startup", company:"Fomo Games", position:"Growth Manager", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"Gaming startup, growth odaklı", url:"https://tr.linkedin.com/jobs/view/growth-manager-at-fomo-games-4399523753" },
+  { id:89, category:"startup", company:"Midas", position:"Growth Strategy", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Fintech unicorn, strateji + growth", url:"https://tr.linkedin.com/jobs/view/growth-strategy-at-midas-4378733426" },
+  { id:90, category:"startup", company:"Massive Bio", position:"Growth Manager (AI Health-Tech)", sector:"HealthTech", location:"Kadıköy", fit:"⭐⭐⭐", note:"AI + sağlık, anlamlı misyon", url:"https://tr.linkedin.com/jobs/view/growth-manager-a%C4%B1-health-tech-clinical-trials-at-massive-bio-4390747349" },
+  { id:91, category:"startup", company:"Medsien", position:"Marketing Automation & Growth Specialist", sector:"HealthTech", location:"İstanbul", fit:"⭐⭐⭐", note:"Otomasyon + growth specialist", url:"https://tr.linkedin.com/jobs/view/marketing-automation-growth-specialist-at-medsien-4386040656" },
+  { id:92, category:"startup", company:"Sanction Scanner", position:"Growth Marketing Lead", sector:"RegTech", location:"Üsküdar", fit:"⭐⭐⭐", note:"B2B growth, fintech-adjacent", url:"https://tr.linkedin.com/jobs/view/growth-marketing-lead-at-sanction-scanner-4412788147" },
+  { id:93, category:"startup", company:"HubX", position:"AI Product Manager", sector:"SaaS/AI", location:"İstanbul", fit:"⭐⭐⭐", note:"AI ürün yönetimi, SaaS", url:"https://tr.linkedin.com/jobs/view/a%C4%B1-product-manager-at-hubx-4410481172" },
+  { id:94, category:"startup", company:"Dataroid", position:"Senior Product Manager", sector:"Analytics", location:"İstanbul", fit:"⭐⭐⭐", note:"Data/analytics, ürün yönetimi", url:"https://tr.linkedin.com/jobs/view/senior-product-manager-at-dataroid-4411590362" },
+  { id:95, category:"startup", company:"Mars Athletic Club", position:"Growth Acquisition Manager", sector:"Sports/App", location:"Beşiktaş", fit:"⭐⭐⭐", note:"Fitness app, müşteri kazanımı", url:"https://tr.linkedin.com/jobs/view/growth-acquisition-manager-at-mars-athletic-club-4414603158" },
+  { id:96, category:"startup", company:"Nivo", position:"Marketing Lead", sector:"Fintech", location:"Üsküdar", fit:"⭐⭐⭐", note:"Fintech startup, marketing lead", url:"https://tr.linkedin.com/jobs/view/marketing-lead-at-nivo-4414357267" },
+  { id:97, category:"startup", company:"MoovBuddy", position:"User Acquisition Manager", sector:"HealthTech", location:"İstanbul", fit:"⭐⭐⭐", note:"HealthTech, kullanıcı kazanımı", url:"https://tr.linkedin.com/jobs/view/user-acquisition-manager-at-moovbuddy-4415242156" },
+  { id:98, category:"startup", company:"R2D Games", position:"Performance Marketing Lead", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"Gaming, performance odaklı", url:"https://tr.linkedin.com/jobs/view/performance-marketing-lead-at-r2d-games-4399948980" },
+  { id:99, category:"startup", company:"Educato AI (YC S24)", position:"GTM Manager - Turkey", sector:"EdTech/AI", location:"Remote", fit:"⭐⭐⭐", note:"YC destekli, GTM stratejisi", url:"https://tr.linkedin.com/jobs/view/go%E2%80%91to%E2%80%91market-gtm-manager-turkey-%F0%9F%87%B9%F0%9F%87%B7-at-educato-a%C4%B1-yc-s24-4286821114" },
+  { id:100, category:"startup", company:"Univenn", position:"AI Product Growth Owner", sector:"AI/SaaS", location:"İzmir", fit:"⭐⭐⭐", note:"AI + growth, yeni nesil pozisyon", url:"https://tr.linkedin.com/jobs/view/a%C4%B1-product-growth-owner-at-univenn-4411195526" },
+  { id:101, category:"startup", company:"bunq", position:"Product Owner - Onboarding", sector:"Fintech", location:"Remote/TR", fit:"⭐⭐⭐", note:"Avrupa fintech, onboarding odaklı", url:"https://tr.linkedin.com/jobs/view/product-owner-onboarding-at-bunq-4416180795" },
+
+  // ==================== REMOTE ====================
+  { id:102, category:"remote", company:"Duolingo", position:"Country Marketing Manager, Turkey", sector:"EdTech", location:"Remote", fit:"⭐⭐⭐⭐", note:"Yüksek sorumluluk, güçlü CV gerektirir", url:"https://tr.linkedin.com/jobs/view/country-marketing-manager-turkey-at-duolingo-4380985718" },
+  { id:103, category:"remote", company:"Canonical", position:"Product Marketing Manager", sector:"Yazılım", location:"Remote", fit:"⭐⭐⭐", note:"Açık kaynak odaklı, teknik marketing", url:"https://tr.linkedin.com/jobs/view/product-marketing-manager-at-canonical-4384100825" },
+  { id:104, category:"remote", company:"Cambly", position:"Senior Performance Marketing Specialist", sector:"EdTech", location:"Remote", fit:"⭐⭐⭐⭐", note:"EdTech, performance, çok uygun", url:"https://tr.linkedin.com/jobs/view/senior-performance-marketing-specialist-%E2%80%94-remote-at-cambly-%C4%B1nc-4416471066" },
+  { id:105, category:"remote", company:"TripleTen", position:"Lifecycle & CRM Growth Manager", sector:"EdTech", location:"Remote", fit:"⭐⭐⭐", note:"CRM + growth kombinasyonu iyi", url:"https://tr.linkedin.com/jobs/view/lifecycle-crm-growth-manager-remote-at-tripleten-%C4%B1ndonesia-4411377577" },
+  { id:106, category:"remote", company:"Assistant App", position:"Growth Manager", sector:"App", location:"Remote", fit:"⭐⭐⭐", note:"App growth, esnek çalışma", url:"https://tr.linkedin.com/jobs/view/growth-manager-at-assistant-app-4411503425" },
+  { id:107, category:"remote", company:"Jobgether", position:"Demand Generation Manager", sector:"Global", location:"Remote", fit:"⭐⭐⭐", note:"B2B demand gen, global", url:"https://tr.linkedin.com/jobs/view/demand-generation-manager-at-jobgether-4419080133" },
+  { id:108, category:"remote", company:"Jobgether", position:"Senior Integrated Marketing Strategist", sector:"Global", location:"Remote", fit:"⭐⭐⭐", note:"Strateji odaklı, geniş kapsam", url:"https://tr.linkedin.com/jobs/view/senior-%C4%B1ntegrated-marketing-strategist-at-jobgether-4419083093" },
+
+  // ==================== 30 MAYIS 2026 YENİ İLANLAR ====================
+  { id:125, category:"big", company:"Apple", position:"Small Business Lead, Turkey", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Apple'ın Türkiye KOBİ iş geliştirme rolü — partnership + satış odaklı", script:"n11'deki B2B partnership yönetimi ve iş birliği kurma hikayelerin burada çok değerli", url:"https://tr.linkedin.com/jobs/view/small-business-lead-turkey-at-apple-4414166266" },
+  { id:126, category:"big", company:"QNB Türkiye", position:"Digital Experience & Marketing Expert", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"QNB'de yeni dijital pazarlama + deneyim rolü — sektörü ve şirketi zaten biliyorsun", script:"QNB'deki portföy yönetimi ve dijital pazarlama geçmişin — aynı bankada farklı birim", url:"https://tr.linkedin.com/jobs/view/servis-bankac%C4%B1l%C4%B1%C4%9F%C4%B1-dijital-deneyim-dijital-pazarlama-uzman%C4%B1-at-qnb-t%C3%BCrkiye-4398259150" },
+  { id:127, category:"big", company:"Red Bull", position:"Gaming and Esports Marketing Specialist", sector:"FMCG", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Red Bull'un gaming/esports specialist rolü — specialist seviyesi, ekip yönetimi yok", url:"https://tr.linkedin.com/jobs/view/gaming-and-esports-marketing-specialist-at-red-bull-4398532076" },
+  { id:128, category:"big", company:"Mavi", position:"CRM Campaign & Segment Management Associate", sector:"Moda", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"Mavi'de CRM + segment yönetimi — CRM geçmişin (n11, Turkcell) birebir uygun", script:"n11'de Papara ve banka kampanyalarında CRM segmentasyonu yapma deneyimin", url:"https://tr.linkedin.com/jobs/view/crm-campaign-segment-management-associate-at-mavi-4408409633" },
+  { id:129, category:"big", company:"TAB Gıda (Burger King TR)", position:"Media and Digital Marketing Specialist", sector:"F&B/Retail", location:"Beşiktaş", fit:"⭐⭐⭐", note:"TAB Gıda = Burger King Türkiye franchise'cısı — büyük FMCG, dijital pazarlama", url:"https://tr.linkedin.com/jobs/view/media-and-digital-marketing-specialist-at-tab-gida-4406459406" },
+  { id:130, category:"big", company:"BSH Ev Aletleri (Bosch)", position:"Product Launch Management Executive", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐", note:"Bosch grubunda ürün lansmanı yönetimi — Turkcell'deki ürün sahipliği deneyimin işe yarar", script:"Turkcell'de ürün sahipliği ve lansmanı (e-SIM, GNC, faturasız) hikayelerin burada relevans", url:"https://tr.linkedin.com/jobs/view/product-launch-management-executive-at-bsh-ev-aletleri-t%C3%BCrkiye-4418097580" },
+
+  // ==================== SCRIPT UYUMLU YENİ İLANLAR ====================
+  { id:113, category:"mid", company:"Sigortam.net", position:"Growth Hacker (Junior/Associate)", sector:"InsurTech", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"Türkiye'nin en büyük sigorta marketplace'i — seni zaten tanıyorlar!", script:"Bizzat Sigortam.net mülakat scriptindesin! Aysu ve Merve ile konuştuğun şirket. Growth hacker pozisyonunda güçlü aday.", url:"https://tr.linkedin.com/jobs/view/growth-hacker-junior-associate-at-sigortam-net-4189918329" },
+  { id:114, category:"mid", company:"Sigortam.net", position:"Marketing Specialist", sector:"InsurTech", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"Türkiye'nin en büyük sigorta marketplace'i", script:"Mülakat süreci yaşadığın şirket — deneyimini ve motivasyonu iyi biliyorlar. Marketing specialist tam profil uyumu.", url:"https://tr.linkedin.com/jobs/view/marketing-specialist-at-sigortam-net-4193433701" },
+  { id:115, category:"remote", company:"Holafly", position:"Growth / Marketing (Remote)", sector:"e-SIM", location:"Remote (Global)", fit:"⭐⭐⭐⭐⭐", note:"Şu an açık ilan yok ama proaktif başvuru yapılabilir — careers.holafly.com", script:"🔥 EN GÜÇLÜ HİKAYEN BURADA: Turkcell'de e-SIM'i keşfeden, üst yönetime sunan ve Holafly/Airalo'yu Türkiye'de kapattıran kişi olarak başvurabilirsin. Bu hikaye ezber bozan bir cover letter oluşturur.", url:"https://careers.holafly.com/jobs" },
+  { id:116, category:"remote", company:"Airalo", position:"Marketing Manager (Remote)", sector:"e-SIM", location:"Remote (Global)", fit:"⭐⭐⭐⭐⭐", note:"Dünyanın en büyük e-SIM marketplace'i, fully remote", script:"🔥 Turkcell'de e-SIM büyüme potansiyelini fark eden, eSIM market analizini yapan ve bu alana product owner olan tek kişi — bu hikaye ile başvuru çok güçlü.", url:"https://www.airalo.com/airalo-careers/job-vacancies" },
+  { id:117, category:"mid", company:"Papara", position:"Partnership / Business Development", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"n11'de Papara ortaklığını yönettin, analiz yapıp kurtardın", script:"n11'deki Papara hikayesi: ortaklık bitmek üzereydi, NBI analizini yaptın, ücretsiz reklam önerisiyle kurtardın. Bu hikaye ile Papara'ya başvuru çok güçlü.", url:"https://www.linkedin.com/company/papara/jobs/" },
+  { id:118, category:"big", company:"Mastercard", position:"Senior Specialist, Product Management", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"EEMEA ürün lansmanı/scaling, prestijli", script:"n11'de Masterpass partnership yönetimi + ödeme sistemleri bilgin (QNB ve n11 kampanyaları) Mastercard için doğrudan relevance.", url:"https://tr.linkedin.com/jobs/view/senior-specialist-product-management-at-mastercard-4412808842" },
+
+  // ==================== YENİ İLANLAR (30 Mayıs 2026) ====================
+  { id:119, category:"mid", company:"Hayat Finans", position:"Tüzel İş Ortaklıkları Yönetmeni", sector:"Fintech", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"5-8 yıl req, fintech/ödeme ortaklıkları, ekip yönetimi yok", script:"n11'deki Papara kurtarma + Masterpass + ETS Tour partnership hikayelerin doğrudan uyuyor. Fintech bankacılık geçmişin (QNB) de artı.", url:"https://tr.linkedin.com/jobs/view/t%C3%BCzel-i%C5%9F-ortakl%C4%B1klar%C4%B1-y%C3%B6netmeni-at-hayat-finans-4413960825" },
+  { id:120, category:"big", company:"BSH Ev Aletleri Türkiye", position:"Product Management Executive", sector:"Teknoloji/FMCG", location:"İstanbul", fit:"⭐⭐⭐", note:"5 yıl req, kategori stratejisi + portföy yönetimi, Bosch/Siemens grubu, ekip mgmt yok", url:"https://tr.linkedin.com/jobs/view/product-management-executive-at-bsh-ev-aletleri-t%C3%BCrkiye-4418107018" },
+  { id:121, category:"mid", company:"Beymen Group", position:"Pazarlama İletişimi Yöneticisi", sector:"Moda/Luxury", location:"Sarıyer", fit:"⭐⭐⭐", note:"6 yıl req, brief'ten stratejiye tüm pazarlama iletişimi, ekip yönetimi belirtilmemiş", url:"https://tr.linkedin.com/jobs/view/pazarlama-ileti%C5%9Fimi-y%C3%B6neticisi-at-beymen-group-4408495336" },
+  { id:122, category:"mid", company:"Acronis", position:"Senior Partner Success Manager", sector:"Siber Güvenlik", location:"İstanbul", fit:"⭐⭐⭐", note:"6 yıl req, partner büyütme + onboarding + upsell, ekip yönetimi yok (id:82'den farklı rol)", script:"n11'deki partner onboarding ve Papara kurtarma deneyimin partner success için doğrudan uygulanabilir.", url:"https://tr.linkedin.com/jobs/view/senior-partner-success-manager-at-acronis-4414651663" },
+  { id:123, category:"startup", company:"Lucida AI", position:"User Acquisition Manager (Mobile)", sector:"AI/App", location:"İstanbul", fit:"⭐⭐⭐", note:"Mobile UA yönetimi, AI startup, büyüyen şirket", url:"https://tr.linkedin.com/jobs/view/user-acquisition-manager-mobile-at-lucida-a%C4%B1-4416098684" },
+  { id:124, category:"startup", company:"Fomo Games", position:"Product Manager", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"Gaming startup PM, id:88'den farklı rol (o Growth Manager idi)", url:"https://tr.linkedin.com/jobs/view/product-manager-at-fomo-games-4412002415" },
+
+  // ==================== UYARI (Ekip Yönetimi) ====================
+  { id:109, category:"warn", company:"Vodafone", position:"Performance Marketing Manager", sector:"Telekom", location:"İstanbul", fit:"⚠️", note:"10+ yıl gerekiyor + aktif ekip yönetimi", url:"https://tr.linkedin.com/jobs/view/performance-marketing-manager-at-vodafone-4398825282" },
+  { id:110, category:"warn", company:"Ödeal", position:"Growth Marketing Manager / Director", sector:"Fintech", location:"Sarıyer", fit:"⚠️", note:"12+ yıl + ekip kurma/yönetme şart", url:"https://tr.linkedin.com/jobs/view/growth-marketing-manager-director-at-%C3%B6deal-4417861643" },
+  { id:111, category:"warn", company:"SevenApps", position:"Sr. Performance Marketing / UA Manager", sector:"Gaming", location:"İstanbul", fit:"⚠️", note:"5+ yıl + junior mentörlük sorumluluğu", url:"https://tr.linkedin.com/jobs/view/sr-performance-marketing-ua-manager-at-sevenapps-4416826915" },
+  { id:112, category:"warn", company:"Doğuş Holding", position:"KIKO Milano E-Ticaret Yöneticisi", sector:"Retail", location:"İstanbul", fit:"⚠️", note:"2 yıl ekip yönetimi deneyimi şart", url:"https://tr.linkedin.com/jobs/view/k%C4%B1ko-milano-e-ticaret-y%C3%B6neticisi-at-do%C4%9Fu%C5%9F-hospitality-retail-group-4375221184" },
+
+  // ==================== 📊 ANALİST POZISYONLARI ====================
+  // SQL yeni öğrenildi — junior/associate/assistant seviye, Python şart olmayan roller
+  { id:131, category:"analyst", company:"n11", position:"Reporting & Analysis Assistant Specialist", sector:"E-Ticaret", location:"Sarıyer", fit:"⭐⭐⭐⭐⭐", note:"🟢 GİRİŞ SEVİYESİ — n11'i zaten biliyorsun, raporlama + Excel/SQL odaklı, kampanya deneyimin çok işe yarar", script:"n11'deki kampanya performans raporlama ve feasibility çalışmaları hikayen bu role birebir uyuyor", url:"https://tr.linkedin.com/jobs/view/reporting-analysis-assistant-specialist-at-n11-4412279558" },
+  { id:132, category:"analyst", company:"Mavi", position:"CRM Campaign & Segment Management Associate", sector:"Moda", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"🟢 GİRİŞ SEVİYESİ (Associate) — CRM segmentasyonu, SQL + Excel, Python şart değil. Turkcell ve n11 CRM geçmişin çok uygun", script:"n11'de hedef kitle segmentasyonu ve Turkcell'de ürün bazlı müşteri analizi hikayelerin", url:"https://tr.linkedin.com/jobs/view/crm-campaign-segment-management-associate-at-mavi-4408409633" },
+  { id:133, category:"analyst", company:"Mavi", position:"Business Intelligence Assistant", sector:"Moda", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟢 GİRİŞ SEVİYESİ (Assistant) — BI raporlama, SQL + Excel ağırlıklı, Python şart değil", url:"https://tr.linkedin.com/jobs/view/business-ıntelligence-assistant-at-mavi-4408400766" },
+  { id:134, category:"analyst", company:"Migros One", position:"Data Analyst", sector:"E-Ticaret/Retail", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — SQL odaklı, e-ticaret veri analizi, marketing geçmişin avantaj. Belirgin Python zorunluluğu yok", script:"Turkcell'deki Excel veri analizi ve n11'deki kampanya raporlama deneyimin burada değerli", url:"https://tr.linkedin.com/jobs/view/data-analyst-at-migros-one-4352528044" },
+  { id:135, category:"analyst", company:"Paxie Games", position:"Data Analyst (New Grad)", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟢 YENİ MEZUN — Gaming'de veri analizi, entry-level, SQL yeterliliği aranıyor", url:"https://tr.linkedin.com/jobs/view/data-analyst-new-grad-at-paxie-games-4397887358" },
+  { id:136, category:"analyst", company:"OXXO TR", position:"Data Analyst", sector:"Retail/FMCG", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Perakende veri analizi, SQL + Excel odaklı, marketing geçmişin bağlam sağlar", url:"https://tr.linkedin.com/jobs/view/data-analyst-at-oxxo-tr-4398481616" },
+  { id:137, category:"analyst", company:"Fortune Mine Games", position:"Data Analyst", sector:"Gaming", location:"Kadıköy", fit:"⭐⭐⭐", note:"🟢 GİRİŞ SEVİYESİ — Gaming şirketi, küçük ekip, öğrenmeye açık ortam", url:"https://tr.linkedin.com/jobs/view/data-analyst-at-fortune-mine-games-4415383010" },
+  { id:138, category:"analyst", company:"F4e", position:"Business Analyst", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Süreç analizi odaklı, marketing+iş geçmişin transferable skill olarak değerlendirilebilir", url:"https://tr.linkedin.com/jobs/view/business-analyst-at-f4e-4416007989" },
+  { id:139, category:"analyst", company:"Maroteknoloji", position:"İş Analisti (CRM)", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — CRM odaklı iş analisti, SQL + CRM tool deneyimi önemli, Turkcell+n11 geçmişin doğrudan uygun", script:"n11'deki Papara CRM analizi ve Turkcell'deki müşteri segmentasyon çalışmaları", url:"https://tr.linkedin.com/jobs/view/ish-analisti-crm-at-maroteknoloji-4413657634" },
+  { id:140, category:"analyst", company:"TEB Arf", position:"İş Analisti (Mobil)", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Mobil bankacılık iş analisti, QNB geçmişin sektör bilgisi avantaj. SQL yeterliliği yeterli", script:"QNB'deki portföy ve fizibilite analizi hikayen bankacılık analistliğine geçişi destekler", url:"https://tr.linkedin.com/jobs/view/ish-analisti-mobil-istanbul-at-teb-arf-4415493390" },
+  { id:141, category:"analyst", company:"Acronis", position:"Go-To-Market Program Enablement Analyst", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Marketing + analitik köprüsü, GTM analizi, Python gerektirmiyor. Marketing geçmişin büyük avantaj", script:"n11'deki partnership kampanya feasibility ve Turkcell'deki ürün analizi hikayelerin çok uygun", url:"https://tr.linkedin.com/jobs/view/go-to-market-program-enablement-analyst-at-acronis-4403471638" },
+  { id:142, category:"analyst", company:"Alfa Laval", position:"Market Intelligence Analyst", sector:"Endüstriyel", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Pazar araştırması + rekabet analizi, Excel+SQL odaklı, global şirket", url:"https://tr.linkedin.com/jobs/view/market-intelligence-analyst-cee-turkiye-at-alfa-laval-4405665973" },
+  { id:143, category:"analyst", company:"DFDS", position:"Business Analyst", sector:"Lojistik", location:"Ataşehir", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Süreç analizi, global lojistik şirketi, SQL odaklı", url:"https://tr.linkedin.com/jobs/view/business-analyst-at-dfds-4398009204" },
+
+  // --- YENİ ANALİST İLANLARI ---
+  { id:144, category:"analyst", company:"Trendyol Group", position:"Dolap, Data Analyst", sector:"E-Ticaret", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Türkiye'nin en büyük platformu, e-ticaret veri analizi. Marketing geçmişin büyük avantaj", url:"https://tr.linkedin.com/jobs/view/dolap-data-analyst-at-trendyol-group-4409789108" },
+  { id:145, category:"analyst", company:"ING Türkiye", position:"TM Analytics Analyst", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — ING'de analytics analisti, bankacılık + SQL, QNB geçmişin sektör bilgisi avantaj", url:"https://tr.linkedin.com/jobs/view/tm-analytics-analyst-at-ıng-türkiye-4410388148" },
+  { id:146, category:"analyst", company:"Anadolu Efes", position:"Raporlama Merkezi Uzmanı", sector:"FMCG/Alkol", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Büyük Türk holding, raporlama uzmanı, Excel+SQL odaklı", url:"https://tr.linkedin.com/jobs/view/raporlama-merkezi-uzman%C4%B1-at-anadolu-efes-4413392854" },
+  { id:147, category:"analyst", company:"Bosch Türkiye", position:"Customer Experience (CX) Analyst", sector:"Teknoloji", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Müşteri deneyimi analizi, Bosch global marka, CRM geçmişin uygun", url:"https://tr.linkedin.com/jobs/view/customer-experience-cx-analyst-at-bosch-türkiye-4411630386" },
+  { id:148, category:"analyst", company:"Yves Rocher", position:"Customer & Marketing Insight Analyst", sector:"Kozmetik/Retail", location:"İstanbul", fit:"⭐⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Marketing insight + müşteri analizi, hem marketing hem analitik köprüsü. Geçiş için ideal!", url:"https://tr.linkedin.com/jobs/view/customer-marketing-ınsight-analyst-at-yves-rocher-4417030940" },
+  { id:149, category:"analyst", company:"Şişecam", position:"Data Solutions Analyst", sector:"Cam/Endüstriyel", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Fortune 500 Türkiye, veri çözümleri analisti, SQL odaklı", url:"https://tr.linkedin.com/jobs/view/data-solutions-analyst-at-%C5%9Fi%C5%9Fecam-4363997200" },
+  { id:150, category:"analyst", company:"TEB", position:"İş Analisti (Ticari Bankacılık)", sector:"Bankacılık", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — TEB büyük banka, ticari bankacılık iş analisti, QNB sektör deneyimin avantaj", url:"https://tr.linkedin.com/jobs/view/i%C5%9F-analisti-ticari-bankac%C4%B1l%C4%B1k-geli%C5%9Ftirme-tak%C4%B1mlar%C4%B1-at-teb-4413678682" },
+  { id:151, category:"analyst", company:"KPMG Türkiye", position:"Sustainability Analytics Analyst/Consultant", sector:"Danışmanlık", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Big 4 danışmanlık, sürdürülebilirlik analitik, prestijli kurum", url:"https://tr.linkedin.com/jobs/view/sustainability-analytics-analyst-consultant-istanbul-ankara-izmir-at-kpmg-türkiye-4414312523" },
+  { id:152, category:"analyst", company:"Hepsiburada", position:"Hepsi SMM Support Analyst", sector:"E-Ticaret", location:"Sancaktepe", fit:"⭐⭐⭐", note:"🟢 GİRİŞ SEVİYESİ — Hepsiburada'da marketplace analizi, e-ticaret geçmişin uygun", url:"https://tr.linkedin.com/jobs/view/hepsi-smm-support-analyst-at-hepsiburada-nasdaq-heps-4415020812" },
+  { id:153, category:"analyst", company:"Bold Games", position:"Data Analyst", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Gaming veri analizi, SQL odaklı, küçük takımda geniş sorumluluk", url:"https://tr.linkedin.com/jobs/view/data-analyst-at-bold-games-4411700285" },
+  { id:154, category:"analyst", company:"Vertigo Games", position:"Data Analyst", sector:"Gaming", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Büyüyen gaming şirketi, veri analizi rolü", url:"https://tr.linkedin.com/jobs/view/data-analyst-at-vertigo-games-4378356429" },
+  { id:155, category:"analyst", company:"Gunvor Group", position:"BI Data Analyst", sector:"Enerji/Trading", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Global enerji şirketi, BI + raporlama, SQL odaklı", url:"https://tr.linkedin.com/jobs/view/b%C4%B1-data-analyst-at-gunvor-group-4397155747" },
+  { id:156, category:"analyst", company:"Amaris Consulting", position:"Data Analyst (Hybrid)", sector:"Danışmanlık", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Uluslararası danışmanlık, hibrit çalışma, farklı sektörlere proje bazlı erişim", url:"https://tr.linkedin.com/jobs/view/data-analyst-hybrid-at-amaris-consulting-4400234899" },
+  { id:157, category:"analyst", company:"OBSS", position:"Business Analyst (Banking)", sector:"Fintech/Bankacılık", location:"İstanbul", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Bankacılık odaklı BA, QNB geçmişin sektör bilgisi avantaj", url:"https://tr.linkedin.com/jobs/view/business-analyst-banking-at-obss-4297403553" },
+  { id:158, category:"analyst", company:"OBSS", position:"Business Analyst (Aviation)", sector:"Havacılık", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Havacılık sektörü BA, farklı sektöre geçiş fırsatı", url:"https://tr.linkedin.com/jobs/view/business-analyst-aviation-at-obss-4397923190" },
+  { id:159, category:"analyst", company:"adesso Turkey", position:"Business Analyst", sector:"IT Danışmanlık", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Alman IT danışmanlık şirketi, BA rolü, SQL + iş süreçleri", url:"https://tr.linkedin.com/jobs/view/business-analyst-at-adesso-turkey-4384575551" },
+  { id:160, category:"analyst", company:"Maroteknoloji", position:"İş Analisti (Mobil)", sector:"Teknoloji", location:"Ataşehir", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Mobil uygulama iş analisti, SQL + ürün bilgisi", url:"https://tr.linkedin.com/jobs/view/i%C5%9F-analisti-mobil-at-maroteknoloji-4413673886" },
+  { id:161, category:"analyst", company:"Bolt Insight", position:"Revenue Operations Analyst", sector:"Teknoloji", location:"Ataşehir", fit:"⭐⭐⭐⭐", note:"🟡 ORTA SEVİYE — Gelir operasyonları analizi, marketing + satış verisi — geçmişin uygun", url:"https://tr.linkedin.com/jobs/view/revenue-operations-analyst-at-bolt-ınsight-4419083230" },
+  { id:162, category:"analyst", company:"Air Liquide", position:"Sales Excellence Analyst", sector:"Endüstriyel/Gaz", location:"İstanbul", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Global sanayi gazları şirketi, satış analitik, SQL + Excel", url:"https://tr.linkedin.com/jobs/view/sales-excellence-analyst-at-air-liquide-4378635124" },
+  { id:163, category:"analyst", company:"Innovance Consultancy", position:"Business Analyst", sector:"IT Danışmanlık", location:"İstanbul", fit:"⭐⭐⭐", note:"🟢 GİRİŞ SEVİYESİ — IT danışmanlık, junior BA alıyorlar, SQL + iş analizi öğrenmeye uygun ortam", url:"https://tr.linkedin.com/jobs/view/business-analyst-at-%C4%B1nnovance-consultancy-4416124597" },
+  { id:164, category:"analyst", company:"Arkas Holding", position:"İş Zekası Uzmanı", sector:"Lojistik/Holding", location:"Beylikdüzü", fit:"⭐⭐⭐", note:"🟡 ORTA SEVİYE — Büyük Türk holding, BI uzmanı, SQL + raporlama odaklı", url:"https://tr.linkedin.com/jobs/view/i%C5%9F-zekas%C4%B1-uzman%C4%B1-at-arkas-holding-4408258485" },
+];
+
+// ============================================================
+// DURUM YÖNETİMİ (localStorage)
+// ============================================================
+function getStatus(id) { return localStorage.getItem('job_'+id) || 'none'; }
+function setStatus(id, status) {
+  const cur = getStatus(id);
+  if (cur === status) { localStorage.removeItem('job_'+id); renderCards(); }
+  else { localStorage.setItem('job_'+id, status); renderCards(); }
+  updateStats();
+}
+function markViewed(id) {
+  if (!localStorage.getItem('viewed_'+id)) {
+    localStorage.setItem('viewed_'+id, '1');
+    updateStats();
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+let currentTab = 'all';
+let currentSector = 'all';
+let sortNewest = false;
+
+function toggleSort(btn) {
+  sortNewest = !sortNewest;
+  btn.textContent = sortNewest ? '🕐 Son Eklenen ✓' : '🕐 Son Eklenen';
+  btn.classList.toggle('sorted', sortNewest);
+  renderCards();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  renderCards();
+}
+
+function filterSector(sector, btn) {
+  currentSector = sector;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+}
+
+function filterCards() { renderCards(); }
+
+function renderCards() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const container = document.getElementById('cardsContainer');
+  container.innerHTML = '';
+
+  let filtered = jobs.filter(j => {
+    const status = getStatus(j.id);
+    const isActioned = status === 'fav' || status === 'applied' || status === 'skip';
+
+    // Ayrı aksiyon sekmeleri — sadece ilgili statüsü göster
+    if (currentTab === 'fav') return status === 'fav';
+    if (currentTab === 'applied') return status === 'applied';
+    if (currentTab === 'skip') return status === 'skip';
+
+    // Script sekmesi: script alanı olanlar (işaretliler hariç)
+    if (currentTab === 'script') return !!j.script && !isActioned;
+
+    // Analist sekmesi: category=analyst olanlar (işaretliler hariç)
+    if (currentTab === 'analyst') return j.category === 'analyst' && !isActioned;
+
+    // Ana listeler (tümü, big, mid, startup, remote, warn): işaretlileri gösterme
+    if (isActioned) return false;
+
+    if (currentTab !== 'all' && j.category !== currentTab) return false;
+    if (currentSector !== 'all' && !j.sector.toLowerCase().includes(currentSector.toLowerCase())) return false;
+    if (search && !j.company.toLowerCase().includes(search) && !j.position.toLowerCase().includes(search) && !j.sector.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Sıralama: son eklenen üstte (id büyükten küçüğe)
+  if (sortNewest) filtered = filtered.slice().sort((a, b) => b.id - a.id);
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>İlan bulunamadı</div></div>';
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+
+  const isActionTab = currentTab === 'fav' || currentTab === 'applied' || currentTab === 'skip';
+
+  filtered.forEach(j => {
+    const status = getStatus(j.id);
+    const card = document.createElement('div');
+    card.className = isActionTab ? 'card in-action' : 'card';
+
+    const catBadge = { big:'🏛️ Büyük', mid:'🏢 Orta', startup:'🚀 Startup', remote:'🌍 Remote', warn:'⚠️ Dikkat', analyst:'📊 Analist' };
+    const catColor = { big:'badge-blue', mid:'badge-purple', startup:'badge-green', remote:'badge-green', warn:'badge-yellow', analyst:'badge-analyst' };
+
+    // Aksiyon sekmelerinde durum rozeti göster
+    const statusLabel = isActionTab
+      ? (status === 'applied' ? '<span class="completed-badge badge-applied">✅ Başvuruldu</span>'
+        : status === 'fav' ? '<span class="completed-badge badge-fav">⭐ Favori</span>'
+        : '<span class="completed-badge badge-skip">❌ Geçildi</span>')
+      : '';
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div>
+          <div class="company">${statusLabel}${j.company}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
+          <span class="badge ${catColor[j.category]}">${catBadge[j.category]}</span>
+          <span class="sector-tag">${j.sector}</span>
+        </div>
+      </div>
+      <div class="position">${j.position}</div>
+      <div class="meta">
+        <span class="meta-item">📍 ${j.location}</span>
+        <span class="meta-item">✨ ${j.fit}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4;">${j.note}</div>
+      ${j.category==='warn' ? '<div class="warning-banner">⚠️ Ekip yönetimi / fazla deneyim gerektirebilir</div>' : ''}
+      ${j.script ? `<div class="script-banner">💡 ${j.script}</div>` : ''}
+      <div class="card-actions">
+        <a href="${j.url}" target="_blank" class="btn-link" onclick="markViewed(${j.id})">Görüntüle →</a>
+        <button class="btn-icon ${status==='fav'?'active-fav':''}" onclick="setStatus(${j.id},'fav')" title="Favorile">⭐</button>
+        <button class="btn-icon ${status==='applied'?'active-applied':''}" onclick="setStatus(${j.id},'applied')" title="Başvurdum">✅</button>
+        <button class="btn-icon ${status==='skip'?'active-skip':''}" onclick="setStatus(${j.id},'skip')" title="Geç">❌</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  container.appendChild(grid);
+}
+
+function updateStats() {
+  const isActioned = j => { const s = getStatus(j.id); return s === 'fav' || s === 'applied' || s === 'skip'; };
+  const active = jobs.filter(j => !isActioned(j));
+
+  const favs    = jobs.filter(j => getStatus(j.id)==='fav').length;
+  const applied = jobs.filter(j => getStatus(j.id)==='applied').length;
+  const skipped = jobs.filter(j => getStatus(j.id)==='skip').length;
+  const viewed  = jobs.filter(j => localStorage.getItem('viewed_'+j.id)).length;
+
+  document.getElementById('totalCount').textContent = active.length;
+  document.getElementById('favCount').textContent = favs;
+  document.getElementById('appliedCount').textContent = applied;
+  document.getElementById('viewedCount').textContent = viewed;
+
+  // Ana sekme sayaçları — sadece işaretlenmemiş aktif ilanlar
+  document.getElementById('count-all').textContent     = active.length;
+  document.getElementById('count-big').textContent     = active.filter(j=>j.category==='big').length;
+  document.getElementById('count-mid').textContent     = active.filter(j=>j.category==='mid').length;
+  document.getElementById('count-startup').textContent = active.filter(j=>j.category==='startup').length;
+  document.getElementById('count-remote').textContent  = active.filter(j=>j.category==='remote').length;
+  document.getElementById('count-warn').textContent    = active.filter(j=>j.category==='warn').length;
+  document.getElementById('count-script').textContent   = active.filter(j=>j.script).length;
+  document.getElementById('count-analyst').textContent  = jobs.filter(j=>j.category==='analyst' && !isActioned(j)).length;
+
+  // Aksiyon sekme sayaçları
+  document.getElementById('count-fav').textContent     = favs;
+  document.getElementById('count-applied').textContent = applied;
+  document.getElementById('count-skip').textContent    = skipped;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('updateTime').textContent = 'Güncellendi: ' + LAST_UPDATED;
+  document.getElementById('footerDate').textContent = LAST_UPDATED;
+  updateStats();
+  renderCards();
+
+  // Scroll to top button
+  window.addEventListener('scroll', () => {
+    document.getElementById('scrollTop').classList.toggle('visible', window.scrollY > 300);
+  });
+});
+</script>
+</body>
+</html>
