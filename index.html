@@ -94,6 +94,20 @@
   .warning-banner { margin: 4px 0 0; padding: 6px 10px; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.2); border-radius: 8px; font-size: 11px; color: var(--yellow); }
   .script-banner { margin: 4px 0 0; padding: 6px 10px; background: rgba(167,139,250,.08); border: 1px solid rgba(167,139,250,.25); border-radius: 8px; font-size: 11px; color: var(--purple); }
 
+  /* SIRALAMA BUTONU */
+  .sort-btn { font-weight: 700; border-color: var(--accent) !important; color: var(--accent) !important; }
+  .sort-btn.sorted { background: rgba(79,142,247,0.15) !important; }
+
+  /* İŞARETLİ SEKME STİLLERİ */
+  .tab-fav-tab.active { background: rgba(251,191,36,.85) !important; color: #000 !important; }
+  .tab-applied-tab.active { background: rgba(52,211,153,.85) !important; color: #000 !important; }
+  .tab-skip-tab.active { background: rgba(248,113,113,.85) !important; color: #000 !important; }
+  .completed-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 600; margin-right: 4px; }
+  .badge-applied { background: rgba(52,211,153,.15); color: var(--green); }
+  .badge-skip { background: rgba(248,113,113,.15); color: var(--red); }
+  .badge-fav { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .card.in-action { opacity: 1 !important; }
+
   /* SCROLLTOP */
   .scroll-top { position: fixed; bottom: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; border: none; cursor: pointer; font-size: 18px; display: none; align-items: center; justify-content: center; z-index: 99; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
   .scroll-top.visible { display: flex; }
@@ -122,14 +136,16 @@
     <button class="tab" onclick="switchTab('startup')" id="tab-startup">🚀 Startup <span class="tab-count" id="count-startup">0</span></button>
     <button class="tab" onclick="switchTab('remote')" id="tab-remote">🌍 Remote <span class="tab-count" id="count-remote">0</span></button>
     <button class="tab" onclick="switchTab('warn')" id="tab-warn">⚠️ Dikkat <span class="tab-count" id="count-warn">0</span></button>
-    <button class="tab" onclick="switchTab('fav')" id="tab-fav">⭐ Favoriler <span class="tab-count" id="count-fav">0</span></button>
-    <button class="tab" onclick="switchTab('applied')" id="tab-applied">✅ Başvurulan <span class="tab-count" id="count-applied">0</span></button>
-    <button class="tab" onclick="switchTab('script')" id="tab-script">🎯 Script Uyumu <span class="tab-count" id="count-script">0</span></button>
+    <button class="tab" onclick="switchTab('script')" id="tab-script">🎯 Script <span class="tab-count" id="count-script">0</span></button>
+    <button class="tab tab-fav-tab" onclick="switchTab('fav')" id="tab-fav">⭐ Favoriler <span class="tab-count" id="count-fav">0</span></button>
+    <button class="tab tab-applied-tab" onclick="switchTab('applied')" id="tab-applied">✅ Başvurulanlar <span class="tab-count" id="count-applied">0</span></button>
+    <button class="tab tab-skip-tab" onclick="switchTab('skip')" id="tab-skip">❌ Geçilenler <span class="tab-count" id="count-skip">0</span></button>
   </div>
 </div>
 
 <div class="filters">
   <input type="text" class="search-bar" id="searchInput" placeholder="🔍 Şirket veya pozisyon ara..." oninput="filterCards()">
+  <button class="filter-btn sort-btn" id="sortBtn" onclick="toggleSort(this)" title="Sıralama">🕐 Son Eklenen</button>
   <button class="filter-btn active" onclick="filterSector('all', this)">Tümü</button>
   <button class="filter-btn" onclick="filterSector('teknoloji', this)">Teknoloji</button>
   <button class="filter-btn" onclick="filterSector('fintech', this)">Fintech</button>
@@ -152,7 +168,7 @@
 // ============================================================
 // İLAN VERİLERİ — Her sabah otomatik güncellenir
 // ============================================================
-const LAST_UPDATED = "30 May 2026, 13:54 (otomatik)";
+const LAST_UPDATED = "30 Mayıs 2026, 00:45";
 
 const jobs = [
   // ==================== BÜYÜK ŞİRKETLER ====================
@@ -324,6 +340,14 @@ function markViewed(id) {
 // ============================================================
 let currentTab = 'all';
 let currentSector = 'all';
+let sortNewest = false;
+
+function toggleSort(btn) {
+  sortNewest = !sortNewest;
+  btn.textContent = sortNewest ? '🕐 Son Eklenen ✓' : '🕐 Son Eklenen';
+  btn.classList.toggle('sorted', sortNewest);
+  renderCards();
+}
 
 function switchTab(tab) {
   currentTab = tab;
@@ -348,14 +372,27 @@ function renderCards() {
 
   let filtered = jobs.filter(j => {
     const status = getStatus(j.id);
+    const isActioned = status === 'fav' || status === 'applied' || status === 'skip';
+
+    // Ayrı aksiyon sekmeleri — sadece ilgili statüsü göster
     if (currentTab === 'fav') return status === 'fav';
     if (currentTab === 'applied') return status === 'applied';
-    if (currentTab === 'script') return !!j.script;
+    if (currentTab === 'skip') return status === 'skip';
+
+    // Script sekmesi: script alanı olanlar (işaretliler hariç)
+    if (currentTab === 'script') return !!j.script && !isActioned;
+
+    // Ana listeler (tümü, big, mid, startup, remote, warn): işaretlileri gösterme
+    if (isActioned) return false;
+
     if (currentTab !== 'all' && j.category !== currentTab) return false;
     if (currentSector !== 'all' && !j.sector.toLowerCase().includes(currentSector.toLowerCase())) return false;
     if (search && !j.company.toLowerCase().includes(search) && !j.position.toLowerCase().includes(search) && !j.sector.toLowerCase().includes(search)) return false;
     return true;
   });
+
+  // Sıralama: son eklenen üstte (id büyükten küçüğe)
+  if (sortNewest) filtered = filtered.slice().sort((a, b) => b.id - a.id);
 
   if (filtered.length === 0) {
     container.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>İlan bulunamadı</div></div>';
@@ -365,18 +402,27 @@ function renderCards() {
   const grid = document.createElement('div');
   grid.className = 'grid';
 
+  const isActionTab = currentTab === 'fav' || currentTab === 'applied' || currentTab === 'skip';
+
   filtered.forEach(j => {
     const status = getStatus(j.id);
     const card = document.createElement('div');
-    card.className = `card status-${status}`;
+    card.className = isActionTab ? 'card in-action' : 'card';
 
     const catBadge = { big:'🏛️ Büyük', mid:'🏢 Orta', startup:'🚀 Startup', remote:'🌍 Remote', warn:'⚠️ Dikkat' };
     const catColor = { big:'badge-blue', mid:'badge-purple', startup:'badge-green', remote:'badge-green', warn:'badge-yellow' };
 
+    // Aksiyon sekmelerinde durum rozeti göster
+    const statusLabel = isActionTab
+      ? (status === 'applied' ? '<span class="completed-badge badge-applied">✅ Başvuruldu</span>'
+        : status === 'fav' ? '<span class="completed-badge badge-fav">⭐ Favori</span>'
+        : '<span class="completed-badge badge-skip">❌ Geçildi</span>')
+      : '';
+
     card.innerHTML = `
       <div class="card-header">
         <div>
-          <div class="company">${j.company}</div>
+          <div class="company">${statusLabel}${j.company}</div>
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
           <span class="badge ${catColor[j.category]}">${catBadge[j.category]}</span>
@@ -390,7 +436,7 @@ function renderCards() {
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.4;">${j.note}</div>
       ${j.category==='warn' ? '<div class="warning-banner">⚠️ Ekip yönetimi / fazla deneyim gerektirebilir</div>' : ''}
-      ${j.script ? `<div class="script-banner">🎯 Script uyumu: ${j.script}</div>` : ''}
+      ${j.script ? `<div class="script-banner">💡 ${j.script}</div>` : ''}
       <div class="card-actions">
         <a href="${j.url}" target="_blank" class="btn-link" onclick="markViewed(${j.id})">Görüntüle →</a>
         <button class="btn-icon ${status==='fav'?'active-fav':''}" onclick="setStatus(${j.id},'fav')" title="Favorile">⭐</button>
@@ -405,26 +451,32 @@ function renderCards() {
 }
 
 function updateStats() {
-  const total = jobs.length;
-  const favs = jobs.filter(j => getStatus(j.id)==='fav').length;
-  const applied = jobs.filter(j => getStatus(j.id)==='applied').length;
-  const viewed = jobs.filter(j => localStorage.getItem('viewed_'+j.id)).length;
+  const isActioned = j => { const s = getStatus(j.id); return s === 'fav' || s === 'applied' || s === 'skip'; };
+  const active = jobs.filter(j => !isActioned(j));
 
-  document.getElementById('totalCount').textContent = total;
+  const favs    = jobs.filter(j => getStatus(j.id)==='fav').length;
+  const applied = jobs.filter(j => getStatus(j.id)==='applied').length;
+  const skipped = jobs.filter(j => getStatus(j.id)==='skip').length;
+  const viewed  = jobs.filter(j => localStorage.getItem('viewed_'+j.id)).length;
+
+  document.getElementById('totalCount').textContent = active.length;
   document.getElementById('favCount').textContent = favs;
   document.getElementById('appliedCount').textContent = applied;
   document.getElementById('viewedCount').textContent = viewed;
 
-  // Tab counts
-  document.getElementById('count-all').textContent = jobs.length;
-  document.getElementById('count-big').textContent = jobs.filter(j=>j.category==='big').length;
-  document.getElementById('count-mid').textContent = jobs.filter(j=>j.category==='mid').length;
-  document.getElementById('count-startup').textContent = jobs.filter(j=>j.category==='startup').length;
-  document.getElementById('count-remote').textContent = jobs.filter(j=>j.category==='remote').length;
-  document.getElementById('count-warn').textContent = jobs.filter(j=>j.category==='warn').length;
-  document.getElementById('count-fav').textContent = favs;
+  // Ana sekme sayaçları — sadece işaretlenmemiş aktif ilanlar
+  document.getElementById('count-all').textContent     = active.length;
+  document.getElementById('count-big').textContent     = active.filter(j=>j.category==='big').length;
+  document.getElementById('count-mid').textContent     = active.filter(j=>j.category==='mid').length;
+  document.getElementById('count-startup').textContent = active.filter(j=>j.category==='startup').length;
+  document.getElementById('count-remote').textContent  = active.filter(j=>j.category==='remote').length;
+  document.getElementById('count-warn').textContent    = active.filter(j=>j.category==='warn').length;
+  document.getElementById('count-script').textContent  = active.filter(j=>j.script).length;
+
+  // Aksiyon sekme sayaçları
+  document.getElementById('count-fav').textContent     = favs;
   document.getElementById('count-applied').textContent = applied;
-  document.getElementById('count-script').textContent = jobs.filter(j=>j.script).length;
+  document.getElementById('count-skip').textContent    = skipped;
 }
 
 // ============================================================
