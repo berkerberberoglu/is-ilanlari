@@ -589,26 +589,26 @@ function renderCards() {
     const status = getStatus(j.id);
     const isActioned = status === 'fav' || status === 'applied' || status === 'skip';
 
-    // Ayrı aksiyon sekmeleri — sadece ilgili statüsü göster + search filtresi
-    if (currentTab === 'fav' || currentTab === 'applied' || currentTab === 'skip') {
-      const targetStatus = currentTab === 'fav' ? 'fav' : currentTab === 'applied' ? 'applied' : 'skip';
-      if (status !== targetStatus) return false;
-      if (search && !j.company.toLowerCase().includes(search) && !j.position.toLowerCase().includes(search) && !j.sector.toLowerCase().includes(search)) return false;
-      return true;
+    // --- SEKME FİLTRESİ ---
+    if (currentTab === 'fav')     { if (status !== 'fav')     return false; }
+    else if (currentTab === 'applied') { if (status !== 'applied') return false; }
+    else if (currentTab === 'skip')    { if (status !== 'skip')    return false; }
+    else if (currentTab === 'script')  { if (!j.script || isActioned) return false; }
+    else if (currentTab === 'analyst') { if (j.category !== 'analyst' || isActioned) return false; }
+    else {
+      // Ana listeler (all, big, mid, startup, remote, warn)
+      if (isActioned) return false;
+      if (currentTab !== 'all' && j.category !== currentTab) return false;
+      if (currentSector !== 'all' && !j.sector.toLowerCase().includes(currentSector.toLowerCase())) return false;
     }
 
-    // Script sekmesi: script alanı olanlar (işaretliler hariç)
-    if (currentTab === 'script') return !!j.script && !isActioned;
+    // --- SEARCH FİLTRESİ (tüm sekmeler için) ---
+    if (search) {
+      const s = search;
+      const hay = (j.company + ' ' + j.position + ' ' + j.sector + ' ' + (j.note||'')).toLowerCase();
+      if (!hay.includes(s)) return false;
+    }
 
-    // Analist sekmesi: category=analyst olanlar (işaretliler hariç)
-    if (currentTab === 'analyst') return j.category === 'analyst' && !isActioned;
-
-    // Ana listeler (tümü, big, mid, startup, remote, warn): işaretlileri gösterme
-    if (isActioned) return false;
-
-    if (currentTab !== 'all' && j.category !== currentTab) return false;
-    if (currentSector !== 'all' && !j.sector.toLowerCase().includes(currentSector.toLowerCase())) return false;
-    if (search && !j.company.toLowerCase().includes(search) && !j.position.toLowerCase().includes(search) && !j.sector.toLowerCase().includes(search)) return false;
     return true;
   });
 
