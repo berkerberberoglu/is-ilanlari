@@ -173,7 +173,7 @@
 // ============================================================
 // İLAN VERİLERİ — Her sabah otomatik güncellenir
 // ============================================================
-const LAST_UPDATED = "05 June 2026, 17:11 (otomatik)";
+const LAST_UPDATED = "5 Haziran 2026, 11:30";
 
 const jobs = [
   // ==================== BÜYÜK ŞİRKETLER ====================
@@ -589,10 +589,13 @@ function renderCards() {
     const status = getStatus(j.id);
     const isActioned = status === 'fav' || status === 'applied' || status === 'skip';
 
-    // Ayrı aksiyon sekmeleri — sadece ilgili statüsü göster
-    if (currentTab === 'fav') return status === 'fav';
-    if (currentTab === 'applied') return status === 'applied';
-    if (currentTab === 'skip') return status === 'skip';
+    // Ayrı aksiyon sekmeleri — sadece ilgili statüsü göster + search filtresi
+    if (currentTab === 'fav' || currentTab === 'applied' || currentTab === 'skip') {
+      const targetStatus = currentTab === 'fav' ? 'fav' : currentTab === 'applied' ? 'applied' : 'skip';
+      if (status !== targetStatus) return false;
+      if (search && !j.company.toLowerCase().includes(search) && !j.position.toLowerCase().includes(search) && !j.sector.toLowerCase().includes(search)) return false;
+      return true;
+    }
 
     // Script sekmesi: script alanı olanlar (işaretliler hariç)
     if (currentTab === 'script') return !!j.script && !isActioned;
