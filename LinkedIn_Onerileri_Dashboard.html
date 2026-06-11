@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İş İlanları Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1e293b, #0f172a); padding: 20px 16px 0; border-bottom: 1px solid #1e293b; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  .header .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+  .tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 0; -webkit-overflow-scrolling: touch; }
+  .tab { display: flex; flex-direction: column; align-items: center; padding: 10px 16px 12px; cursor: pointer; border-radius: 8px 8px 0 0; background: #1e293b; color: #94a3b8; font-size: 11px; font-weight: 500; white-space: nowrap; border: 1px solid #334155; border-bottom: none; transition: all .2s; min-width: 72px; }
+  .tab .count { font-size: 22px; font-weight: 700; line-height: 1; color: #64748b; }
+  .tab.active { background: #0f172a; color: #60a5fa; border-color: #334155; border-bottom: 1px solid #0f172a; }
+  .tab.active .count { color: #60a5fa; }
+  .tab:hover:not(.active) { background: #263148; }
+  .controls { background: #0f172a; padding: 12px 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid #1e293b; }
+  .search { flex: 1; min-width: 200px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #e2e8f0; font-size: 14px; outline: none; }
+  .search:focus { border-color: #60a5fa; }
+  .search::placeholder { color: #475569; }
+  .sort-btn { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; color: #94a3b8; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .sort-btn:hover { background: #263148; color: #e2e8f0; }
+  .jobs-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .job-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px; transition: all .2s; }
+  .job-card:hover { border-color: #475569; background: #263148; }
+  .job-card.viewed { border-left: 3px solid #f59e0b; }
+  .job-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+  .job-title { font-size: 14px; font-weight: 600; color: #f1f5f9; line-height: 1.3; flex: 1; }
+  .job-meta { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+  .job-meta span { margin-right: 8px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .tag { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .tag-alarm { background: #1e3a5f; color: #60a5fa; }
+  .tag-basvuru { background: #1a3d2e; color: #4ade80; }
+  .tag-viewed { background: #3d2b00; color: #f59e0b; }
+  .job-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .status-select { background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #94a3b8; font-size: 12px; padding: 4px 8px; cursor: pointer; outline: none; }
+  .status-select:focus { border-color: #60a5fa; }
+  .view-btn { font-size: 12px; color: #60a5fa; text-decoration: none; font-weight: 500; padding: 4px 10px; border: 1px solid #1d4ed8; border-radius: 6px; }
+  .view-btn:hover { background: #1d4ed8; color: #fff; }
+  .empty { text-align: center; padding: 48px 16px; color: #475569; }
+  .empty-icon { font-size: 40px; margin-bottom: 8px; }
+  .badge-guncel { background: #166534; color: #4ade80; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+    <h1>💼 İş İlanları</h1>
+    <span class="badge-guncel">GÜNCEL</span>
+  </div>
+  <div class="sub">Son güncelleme: 11 Haziran 2026 · LinkedIn başvuru ve alarm takibi</div>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="aktif">
+      <span class="count" id="cnt-aktif">0</span>
+      Aktif
+    </div>
+    <div class="tab" data-tab="incele">
+      <span class="count" id="cnt-incele">0</span>
+      İncelenecek
+    </div>
+    <div class="tab" data-tab="basvuruldu">
+      <span class="count" id="cnt-basvuruldu">0</span>
+      Başvuruldu
+    </div>
+    <div class="tab" data-tab="ilgisiz">
+      <span class="count" id="cnt-ilgisiz">0</span>
+      İlgisiz
+    </div>
+  </div>
+</div>
+<div class="controls">
+  <input type="search" class="search" id="search" placeholder="Pozisyon veya şirket ara…">
+  <button class="sort-btn" id="sortBtn">⬇ Yeniden Eskiye</button>
+</div>
+<div class="jobs-list" id="jobsList"></div>
+
+<script>
+const RAW = [
+  // ALARM İLANLARI
+  { id:'a1', title:'Sales Executive', company:'İyi Hava', location:'İstanbul', date:'2026-06-11', jobId:'4423120066', source:'alarm', viewed:false },
+  { id:'a2', title:'Business Development', company:'Plandy', location:'İstanbul', date:'2026-06-11', jobId:'4425829811', source:'alarm', viewed:false },
+  { id:'a3', title:'Growth Marketing Specialist', company:'Astairo', location:'İstanbul', date:'2026-06-11', jobId:'4426102133', source:'alarm', viewed:false },
+  { id:'a4', title:'Dijital Kanallar İş Geliştirme Kıdemli Uzmanı', company:'Tera Bank', location:'İstanbul', date:'2026-06-11', jobId:'4426732919', source:'alarm', viewed:false },
+  { id:'a5', title:'Digital Growth Manager', company:'TAV Operation Services', location:'İstanbul', date:'2026-06-10', jobId:'4426305063', source:'alarm', viewed:false },
+  { id:'a6', title:'Digital Experience Lead - IC Turkey', company:'The Magnum Ice Cream Company', location:'İstanbul', date:'2026-06-10', jobId:'4425829968', source:'alarm', viewed:false },
+  { id:'a7', title:'Indirect Procurement Specialist', company:'Getir', location:'İstanbul', date:'2026-06-10', jobId:'4422288882', source:'alarm', viewed:false },
+  { id:'a8', title:'Transaction Services Associate / Senior Associate', company:'Deloitte', location:'İstanbul', date:'2026-06-10', jobId:'4425848485', source:'alarm', viewed:false },
+  { id:'a9', title:'Kampanya Uzmanı', company:'idefix', location:'İstanbul', date:'2026-06-10', jobId:'4422269698', source:'alarm', viewed:false },
+  { id:'a10', title:'Product Owner / Product Owner Lead', company:'Yıldız Tech', location:'Üsküdar', date:'2026-06-10', jobId:'4412658060', source:'alarm', viewed:false },
+  { id:'a11', title:'Product Specialist', company:'Midas', location:'İstanbul', date:'2026-06-10', jobId:'4425972810', source:'alarm', viewed:false },
+  // BAŞVURU ONAYLARI
+  { id:'b1', title:'Ürün Uzmanı', company:'FLO Group', location:'Türkiye', date:'2026-06-11', jobId:null, source:'basvuru', viewed:false },
+  { id:'b2', title:'Business Banking-Digital Marketing, Payment and Digital Tribe Lead', company:'ING Türkiye', location:'Türkiye', date:'2026-06-11', jobId:null, source:'basvuru', viewed:false },
+  { id:'b3', title:'—', company:'Tera Bank', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b4', title:'—', company:'Misli', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b5', title:'—', company:'ASICS', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b6', title:'—', company:'Alshaya Group Türkiye', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b7', title:'—', company:'Saat ve Saat', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b8', title:'—', company:'Gratis', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b9', title:'—', company:'Ace Games', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b10', title:'—', company:'Rossmann Türkiye', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b11', title:'—', company:'Bupa Türkiye', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b12', title:'—', company:'Bug.AI', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b13', title:'—', company:'Jobgether', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b14', title:'—', company:'Adecco', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b15', title:'—', company:'Alternatif Bank', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b16', title:'—', company:'Migros Ticaret', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b17', title:'—', company:'Hayat', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b18', title:'—', company:'Tarfin', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b19', title:'—', company:'Lucida AI', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b20', title:'—', company:'DenizBank', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b21', title:'—', company:'Miele', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b22', title:'—', company:'Redington Turkey', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b23', title:'—', company:'Beymen Group', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b24', title:'—', company:'MoneyPay', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b25', title:'—', company:'Sütaş Grubu', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  { id:'b26', title:'—', company:'ASUS', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:false },
+  // BAŞVURU GÖRÜNTÜLENDİ
+  { id:'g1', title:'— (Başvuru Görüntülendi)', company:'GoWit Technology', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:true },
+  { id:'g2', title:'— (Başvuru Görüntülendi)', company:'DIGIVEGA®', location:'Türkiye', date:'2026-06-10', jobId:null, source:'basvuru', viewed:true },
+];
+
+const STORAGE_KEY = 'ilan_statuses_v3';
+const defaultStatus = j => j.source === 'alarm' ? 'incele' : 'basvuruldu';
+
+function loadStatuses() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+function saveStatuses(s) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+}
+
+let statuses = loadStatuses();
+let activeTab = 'aktif';
+let sortAsc = false;
+let searchQ = '';
+
+RAW.forEach(j => { if (!statuses[j.id]) statuses[j.id] = defaultStatus(j); });
+saveStatuses(statuses);
+
+function getFiltered() {
+  let list = RAW.map(j => ({ ...j, status: statuses[j.id] || defaultStatus(j) }));
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    list = list.filter(j => j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q));
+  }
+  if (activeTab === 'aktif') list = list.filter(j => j.status === 'incele' || j.status === 'beklemede');
+  else if (activeTab !== 'aktif') list = list.filter(j => j.status === activeTab);
+  list.sort((a, b) => {
+    const d = new Date(a.date) - new Date(b.date);
+    return sortAsc ? d : -d;
+  });
+  return list;
+}
+
+function getCounts() {
+  const all = RAW.map(j => ({ ...j, status: statuses[j.id] || defaultStatus(j) }));
+  return {
+    aktif: all.filter(j => j.status === 'incele' || j.status === 'beklemede').length,
+    incele: all.filter(j => j.status === 'incele').length,
+    basvuruldu: all.filter(j => j.status === 'basvuruldu').length,
+    ilgisiz: all.filter(j => j.status === 'ilgisiz').length,
+  };
+}
+
+function fmtDate(d) {
+  const dt = new Date(d);
+  return dt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+}
+
+function jobUrl(j) {
+  if (j.jobId) return `https://www.linkedin.com/jobs/view/${j.jobId}/`;
+  return `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(j.company)}`;
+}
+
+function render() {
+  const list = getFiltered();
+  const counts = getCounts();
+  document.getElementById('cnt-aktif').textContent = counts.aktif;
+  document.getElementById('cnt-incele').textContent = counts.incele;
+  document.getElementById('cnt-basvuruldu').textContent = counts.basvuruldu;
+  document.getElementById('cnt-ilgisiz').textContent = counts.ilgisiz;
+
+  const el = document.getElementById('jobsList');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div>Bu kategoride ilan yok</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(j => `
+    <div class="job-card ${j.viewed ? 'viewed' : ''}">
+      <div class="job-header">
+        <div class="job-title">${j.title}</div>
+      </div>
+      <div class="job-meta">
+        <span>🏢 ${j.company}</span>
+        <span>📍 ${j.location}</span>
+        <span>📅 ${fmtDate(j.date)}</span>
+      </div>
+      <div class="tags">
+        <span class="tag ${j.source === 'alarm' ? 'tag-alarm' : 'tag-basvuru'}">${j.source === 'alarm' ? '🔔 Alarm' : '📩 Başvuru'}</span>
+        ${j.viewed ? '<span class="tag tag-viewed">👁 Görüntülendi</span>' : ''}
+      </div>
+      <div class="job-footer">
+        <select class="status-select" data-id="${j.id}">
+          <option value="incele" ${statuses[j.id]==='incele'?'selected':''}>🔍 İncelenecek</option>
+          <option value="basvuruldu" ${statuses[j.id]==='basvuruldu'?'selected':''}>📤 Başvuruldu</option>
+          <option value="ilgisiz" ${statuses[j.id]==='ilgisiz'?'selected':''}>❌ İlgisiz</option>
+          <option value="beklemede" ${statuses[j.id]==='beklemede'?'selected':''}>⏳ Beklemede</option>
+        </select>
+        <a class="view-btn" href="${jobUrl(j)}">Görüntüle →</a>
+      </div>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.status-select').forEach(sel => {
+    sel.addEventListener('change', e => {
+      statuses[e.target.dataset.id] = e.target.value;
+      saveStatuses(statuses);
+      render();
+    });
+  });
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  activeTab = tab.dataset.tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
+  render();
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  searchQ = e.target.value;
+  render();
+});
+
+document.getElementById('sortBtn').addEventListener('click', () => {
+  sortAsc = !sortAsc;
+  document.getElementById('sortBtn').textContent = sortAsc ? '⬆ Eskiden Yeniye' : '⬇ Yeniden Eskiye';
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
